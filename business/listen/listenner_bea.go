@@ -56,7 +56,7 @@ func NewDev(port string, baudRate int) (Dev, error) {
 	return dev, nil
 }
 
-func (dev *BeaDevice) SendData(data []byte)
+func (dev *BeaDevice) SendData(data []byte) {}
 
 type mem struct {
 	inputA  uint32
