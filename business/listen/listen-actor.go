@@ -88,6 +88,7 @@ func (act *ListenActor) Receive(ctx actor.Context) {
 		logs.LogInfo.Printf("actor stopped, reason: %s", msg)
 	case *actor.Started:
 		// act.initlogs.Logs()
+		logs.LogInfo.Printf("actor started \"%s\"", ctx.Self().Id)
 		dev, err := NewDev(act.socket, act.baudRate)
 		if err != nil {
 			time.Sleep(3 * time.Second)
