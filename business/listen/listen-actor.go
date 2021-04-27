@@ -94,6 +94,7 @@ func (act *ListenActor) Receive(ctx actor.Context) {
 			panic(err)
 		}
 		act.dev = dev
+		go act.runListen(act.quit)
 	case *actor.Stopping:
 		logs.LogWarn.Println("stopped actor")
 		select {
