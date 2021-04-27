@@ -84,7 +84,7 @@ func (d *BeaDevice) Listen(quit chan int) chan *Event {
 
 	funcRead := func(io IoDev, memInputs *mem) error {
 		resp, err := io.dev.ReadData(byte(0x10), lenData)
-		logs.LogBuild.Printf("sendframe resp: [% X]\n", resp)
+		//logs.LogBuild.Printf("sendframe resp: [% X]\n", resp)
 		if err != nil {
 			logs.LogError.Println(err)
 			return err
