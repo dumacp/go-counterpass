@@ -1,3 +1,5 @@
+// +build !sonar
+
 package listen
 
 import (
@@ -39,17 +41,17 @@ func NewDev(port string, baudRate int) (Dev, error) {
 	if err != nil {
 		return nil, err
 	}
-	ioFront.SetAddress(0x81)
+	ioFront.SetAddress(0x82)
 
 	ioBack, err := turnstilene.NewDeviceIO(p)
 	if err != nil {
 		return nil, err
 	}
-	ioBack.SetAddress(0x82)
+	ioBack.SetAddress(0x81)
 
 	dev := &BeaDevice{
-		front:     IoDev{ioFront, 0x81},
-		back:      IoDev{ioBack, 0x82},
+		front:     IoDev{ioFront, 0x82},
+		back:      IoDev{ioBack, 0x81},
 		chProcess: make(chan []byte, 0),
 	}
 
