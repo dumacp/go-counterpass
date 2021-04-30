@@ -162,7 +162,7 @@ func (act *ListenActor) runListen(quit chan int) {
 			switch event.Type {
 			case messages.INPUT:
 				id := event.ID
-				if id == 0x81 {
+				if id == 0x82 {
 					enters := event.Value
 					if diff := enters - act.enters0Before; diff > 0 {
 						act.context.Send(act.context.Parent(), &messages.Event{Id: 0, Type: messages.INPUT, Value: enters})
