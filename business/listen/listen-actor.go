@@ -177,7 +177,7 @@ func (act *ListenActor) runListen(quit chan int) {
 				}
 			case messages.OUTPUT:
 				id := event.ID
-				if id == 0x81 {
+				if id == 0x82 {
 					enters := event.Value
 					if diff := enters - act.exits0Before; diff > 0 {
 						act.context.Send(act.context.Parent(), &messages.Event{Id: 0, Type: messages.OUTPUT, Value: enters})
@@ -192,7 +192,7 @@ func (act *ListenActor) runListen(quit chan int) {
 				}
 			case messages.TAMPERING:
 				id := event.ID
-				if id == 0x81 {
+				if id == 0x82 {
 					enters := event.Value
 					if diff := enters - act.locks0Before; diff > 0 {
 						act.context.Send(act.context.Parent(), &messages.Event{Id: 0, Type: messages.TAMPERING, Value: enters})
