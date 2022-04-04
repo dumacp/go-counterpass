@@ -15,25 +15,27 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/persistence"
-	"github.com/dumacp/go-counterpass/business/app"
-	"github.com/dumacp/go-counterpass/business/listen"
-	pubs "github.com/dumacp/go-counterpass/business/pubsub"
-	"github.com/dumacp/go-counterpass/logs"
-	"github.com/dumacp/go-counterpass/messages"
+	"github.com/dumacp/go-counterpass/internal/app"
+	"github.com/dumacp/go-counterpass/internal/device"
+	"github.com/dumacp/go-counterpass/internal/doors"
+	"github.com/dumacp/go-counterpass/internal/gps"
+	"github.com/dumacp/go-counterpass/internal/listen"
+	pubs "github.com/dumacp/go-counterpass/internal/pubsub"
+	"github.com/dumacp/go-logs/pkg/logs"
 )
 
 const (
-	showVersion = "1.0.22"
+	showVersion = "2.0.4"
 )
 
 var debug bool
 var logStd bool
 var socket string
 var pathdb string
-var port string
 var baudRate int
 var version bool
-var loglevel int
+
+// var loglevel int
 var isZeroOpenStateDoor0 bool
 var isZeroOpenStateDoor1 bool
 var disableDoorGpioListen bool
@@ -41,6 +43,7 @@ var typeCounterDoor int
 var sendGpsToConsole bool
 var simulate bool
 var mqtt bool
+var vendor bool
 var disablePersistence bool
 var initCounters string
 
@@ -58,8 +61,9 @@ func init() {
 	22  -> outputs back door`)
 	flag.IntVar(&baudRate, "baud", 19200, "baudrate")
 	flag.IntVar(&typeCounterDoor, "typeCounterDoor", 0, "0: two counters (front and back), 1: front counter, 2: back counter")
-	flag.IntVar(&loglevel, "loglevel", 0, "level log")
+	// flag.IntVar(&loglevel, "loglevel", 0, "level log")
 	flag.BoolVar(&version, "version", false, "show version")
+	flag.BoolVar(&vendor, "vendor", false, "show supported vendor")
 	flag.BoolVar(&isZeroOpenStateDoor0, "zeroOpenStateDoor0", false, "Is Zero the open state in front door?")
 	flag.BoolVar(&isZeroOpenStateDoor0, "zeroOpenStateDoor1", false, "Is Zero the open state in back door?")
 	flag.BoolVar(&disableDoorGpioListen, "disableDoorGpioListen", false, "disable DoorGpio Listen")
@@ -71,8 +75,17 @@ func main() {
 
 	flag.Parse()
 
+	if typeCounterDoor < 0 || typeCounterDoor > 2 {
+		log.Fatalln("wrong typeCounterDoor")
+	}
+
 	if version {
 		fmt.Printf("version: %s\n", showVersion)
+		os.Exit(2)
+	}
+
+	if vendor {
+		fmt.Printf("vendor: %s\n", app.VendorCounter)
 		os.Exit(2)
 	}
 
@@ -87,32 +100,48 @@ func main() {
 		}
 	}
 
-	rootContext := actor.EmptyRootContext
+	rootContext := actor.NewActorSystem().Root
 
-	listenner := listen.NewListen(socket, baudRate)
-	listenner.SendToConsole(sendGpsToConsole)
-	listenner.Test(simulate)
-	// listenner.SetLogError(errlog).SetLogWarn(warnlog).SetLogInfo(infolog).SetLogBuild(buildlog)
-	// if debug {
-	// 	listenner.WithDebug()
-	// }
+	pubs.Init(rootContext)
 
-	counting := new(app.CountingActor)
-	if len(initCounters) > 0 {
-		counting = app.NewCountingActor(nil)
-	} else {
-		counting = app.NewCountingActor(listenner)
+	actorGps := gps.NewActor()
+	propGps := actor.PropsFromProducer(func() actor.Actor { return actorGps })
+	pidGps, err := rootContext.SpawnNamed(propGps, "gps-actor")
+	if err != nil {
+		logs.LogError.Fatalln(err)
 	}
+
+	var pidDoors *actor.PID
+	if !disableDoorGpioListen {
+		actorDoors := doors.New()
+		propsDoors := actor.PropsFromProducer(func() actor.Actor { return actorDoors })
+		pidDoors, err = rootContext.SpawnNamed(propsDoors, "doors")
+		if err != nil {
+			logs.LogError.Println(err)
+		}
+	}
+
+	actorDevice := device.NewActor(socket, baudRate, 300*time.Millisecond)
+	propDevice := actor.PropsFromProducer(func() actor.Actor { return actorDevice })
+	pidDevice, err := rootContext.SpawnNamed(propDevice, "device")
+	if err != nil {
+		logs.LogError.Fatalln(err)
+	}
+
+	actorListen := listen.NewListen(typeCounterDoor)
+	propListen := actor.PropsFromProducer(func() actor.Actor { return actorListen })
+	pidListen, err := rootContext.SpawnNamed(propListen, "listenner")
+	if err != nil {
+		logs.LogError.Fatalln(err)
+	}
+
+	counting := app.NewCountingActor()
+
 	counting.SetZeroOpenStateDoor0(isZeroOpenStateDoor0)
 	counting.SetZeroOpenStateDoor1(isZeroOpenStateDoor1)
 	counting.DisableDoorGpioListen(disableDoorGpioListen)
 	counting.CounterType(typeCounterDoor)
 	counting.SetGPStoConsole(sendGpsToConsole)
-
-	// counting.SetLogError(errlog).SetLogWarn(warnlog).SetLogInfo(infolog).SetLogBuild(buildlog)
-	// if debug {
-	// 	counting.WithDebug()
-	// }
 
 	propsCounting := actor.PropsFromProducer(func() actor.Actor { return counting })
 	if !disablePersistence {
@@ -123,12 +152,35 @@ func main() {
 
 	pidCounting, err := rootContext.SpawnNamed(propsCounting, "counting")
 	if err != nil {
-		logs.LogError.Println(err)
+		logs.LogError.Fatalln(err)
 	}
 
-	if mqtt || len(initCounters) > 0 {
-		rootContext.Send(pidCounting, &pubs.MsgSendEvents{Data: false})
+	rootContext.RequestWithCustomSender(
+		pidDevice,
+		&device.Subscribe{},
+		pidListen)
+
+	rootContext.RequestWithCustomSender(
+		pidListen,
+		&listen.Subscribe{},
+		pidCounting)
+
+	rootContext.RequestWithCustomSender(
+		pidCounting,
+		&app.MsgRegisterGPS{},
+		pidGps)
+
+	if !disableDoorGpioListen {
+		rootContext.RequestWithCustomSender(
+			pidDoors,
+			&doors.Subscribe{},
+			pidCounting)
 	}
+
+	if mqtt {
+		rootContext.Send(pidCounting, &app.MsgSendEvents{Data: false})
+	}
+
 	if len(initCounters) > 0 {
 		space := regexp.MustCompile(`\s+`)
 		s := space.ReplaceAllString(initCounters, " ")
@@ -144,8 +196,12 @@ func main() {
 			}
 			data = append(data, int64(v))
 		}
-		rootContext.Send(pidCounting, &app.MsgInitCounters{data[0], data[1], data[2], data[3]})
-		rootContext.Send(pidCounting, &messages.Event{Type: 0, Value: 160, Id: 0})
+		rootContext.Send(pidCounting, &app.MsgInitCounters{
+			Inputs0:  data[0],
+			Inputs1:  data[1],
+			Outputs0: data[2],
+			Outputs1: data[3]})
+		// rootContext.Send(pidCounting, &messages.Event{Type: 0, Value: 160, Id: 0})
 		time.Sleep(1 * time.Second)
 		rootContext.PoisonFuture(pidCounting).Wait()
 		log.Fatalln("database is initialize")
@@ -154,13 +210,6 @@ func main() {
 	time.Sleep(3 * time.Second)
 
 	rootContext.Send(pidCounting, &app.MsgSendRegisters{})
-
-	//TEST
-	// rootContext.PoisonFuture(pidListen).Wait()
-	// pidListen, err = rootContext.SpawnNamed(propsListen, "listenner")
-	// if err != nil {
-	// 	errlog.Println(err)
-	// }
 
 	logs.LogInfo.Printf("back door counter START --  version: %s\n", showVersion)
 
@@ -171,84 +220,6 @@ func main() {
 			rootContext.Send(pidCounting, &app.MsgSendRegisters{})
 		}
 	}()
-
-	if simulate {
-		day := time.Now().Day()
-		hora := 171315
-		inputsAll := 220449
-		outputsAll := 24695
-		inputs := 111
-		outputs := 32
-
-		funcUpdate := func() []byte {
-			data := []byte(fmt.Sprintf(">S;0RPTC%d;%d;%d;10;0;%d;%d;0;0;10;8;3;0;0;0;34574;*",
-				day, inputsAll, outputsAll, inputs, outputs))
-			csum := byte(0)
-			for _, v := range data {
-				csum ^= v
-			}
-			data = append(data, []byte(fmt.Sprintf("%02X<", csum))...)
-			data = append(data, []byte("\r\n")...)
-			return data
-		}
-		funcGPS := func() []byte {
-			data := []byte(fmt.Sprintf(">S;0$GPRMC,%d.000,A,0613.2526,N,07534.2606,W,0.00,323.36,240920,,,D;*",
-				hora))
-			csum := byte(0)
-			for _, v := range data {
-				csum ^= v
-			}
-			data = append(data, []byte(fmt.Sprintf("%02X<", csum))...)
-			data = append(data, []byte("\r\n")...)
-			return data
-		}
-
-		go func() {
-			tick1 := time.NewTicker(3 * time.Second)
-			defer tick1.Stop()
-			tick2 := time.NewTicker(10 * time.Second)
-			defer tick2.Stop()
-			tick3 := time.NewTicker(30 * time.Second)
-			defer tick3.Stop()
-			for {
-				select {
-				case <-tick1.C:
-					// logs.LogBuild.Println(funcUpdate())
-					rootContext.Send(pidCounting, &listen.MsgToTest{Data: funcUpdate()})
-					if sendGpsToConsole {
-						rootContext.Send(pidCounting, &listen.MsgToTest{Data: funcGPS()})
-					}
-					hora++
-				case <-tick2.C:
-					inputs++
-					inputsAll++
-					// logs.LogBuild.Println(funcUpdate())
-					rootContext.Send(pidCounting, &listen.MsgToTest{Data: funcUpdate()})
-				case <-tick3.C:
-					outputs++
-					outputsAll++
-					// logs.LogBuild.Println(funcUpdate())
-					rootContext.Send(pidCounting, &listen.MsgToTest{Data: funcUpdate()})
-
-				}
-			}
-		}()
-
-	}
-
-	// //TEST
-	// {
-	// 	msg1 := messages.Event{Id: 0, Value: 10, Type: messages.INPUT}
-	// 	msg2 := messages.Event{Id: 0, Value: 1, Type: messages.OUTPUT}
-	// 	msg3 := messages.Event{Id: 0, Value: 12, Type: messages.INPUT}
-	// 	msg4 := messages.Event{Id: 0, Value: 5, Type: messages.OUTPUT}
-
-	// 	rootContext.Send(pidCounting, &msg1)
-	// 	rootContext.Send(pidCounting, &msg2)
-	// 	rootContext.Send(pidCounting, &msg3)
-	// 	rootContext.Send(pidCounting, &msg4)
-
-	// }
 
 	finish := make(chan os.Signal, 1)
 	signal.Notify(finish, syscall.SIGINT)

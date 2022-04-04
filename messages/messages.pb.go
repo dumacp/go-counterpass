@@ -33,6 +33,7 @@ const (
 	OUTPUT    Event_EventType = 1
 	SCENE     Event_EventType = 2
 	TAMPERING Event_EventType = 3
+	ANOMALY   Event_EventType = 4
 )
 
 var Event_EventType_name = map[int32]string{
@@ -40,6 +41,7 @@ var Event_EventType_name = map[int32]string{
 	1: "OUTPUT",
 	2: "SCENE",
 	3: "TAMPERING",
+	4: "ANOMALY",
 }
 
 var Event_EventType_value = map[string]int32{
@@ -47,6 +49,7 @@ var Event_EventType_value = map[string]int32{
 	"OUTPUT":    1,
 	"SCENE":     2,
 	"TAMPERING": 3,
+	"ANOMALY":   4,
 }
 
 func (Event_EventType) EnumDescriptor() ([]byte, []int) {
@@ -113,10 +116,12 @@ func (m *Event) GetType() Event_EventType {
 }
 
 type Snapshot struct {
-	Inputs     map[int32]int64 `protobuf:"bytes,1,rep,name=Inputs,proto3" json:"Inputs,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
-	Outputs    map[int32]int64 `protobuf:"bytes,2,rep,name=Outputs,proto3" json:"Outputs,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
-	RawInputs  map[int32]int64 `protobuf:"bytes,3,rep,name=RawInputs,proto3" json:"RawInputs,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
-	RawOutputs map[int32]int64 `protobuf:"bytes,4,rep,name=RawOutputs,proto3" json:"RawOutputs,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+	Inputs       map[int32]int64 `protobuf:"bytes,1,rep,name=Inputs,proto3" json:"Inputs,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+	Outputs      map[int32]int64 `protobuf:"bytes,2,rep,name=Outputs,proto3" json:"Outputs,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+	RawInputs    map[int32]int64 `protobuf:"bytes,3,rep,name=RawInputs,proto3" json:"RawInputs,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+	RawOutputs   map[int32]int64 `protobuf:"bytes,4,rep,name=RawOutputs,proto3" json:"RawOutputs,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+	RawAnomalies map[int32]int64 `protobuf:"bytes,5,rep,name=RawAnomalies,proto3" json:"RawAnomalies,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+	RawTampering map[int32]int64 `protobuf:"bytes,6,rep,name=RawTampering,proto3" json:"RawTampering,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
 }
 
 func (m *Snapshot) Reset()      { *m = Snapshot{} }
@@ -179,6 +184,20 @@ func (m *Snapshot) GetRawOutputs() map[int32]int64 {
 	return nil
 }
 
+func (m *Snapshot) GetRawAnomalies() map[int32]int64 {
+	if m != nil {
+		return m.RawAnomalies
+	}
+	return nil
+}
+
+func (m *Snapshot) GetRawTampering() map[int32]int64 {
+	if m != nil {
+		return m.RawTampering
+	}
+	return nil
+}
+
 type CountingActor struct {
 	Address string `protobuf:"bytes,1,opt,name=Address,proto3" json:"Address,omitempty"`
 	ID      string `protobuf:"bytes,2,opt,name=ID,proto3" json:"ID,omitempty"`
@@ -236,42 +255,48 @@ func init() {
 	proto.RegisterType((*Snapshot)(nil), "messages.Snapshot")
 	proto.RegisterMapType((map[int32]int64)(nil), "messages.Snapshot.InputsEntry")
 	proto.RegisterMapType((map[int32]int64)(nil), "messages.Snapshot.OutputsEntry")
+	proto.RegisterMapType((map[int32]int64)(nil), "messages.Snapshot.RawAnomaliesEntry")
 	proto.RegisterMapType((map[int32]int64)(nil), "messages.Snapshot.RawInputsEntry")
 	proto.RegisterMapType((map[int32]int64)(nil), "messages.Snapshot.RawOutputsEntry")
+	proto.RegisterMapType((map[int32]int64)(nil), "messages.Snapshot.RawTamperingEntry")
 	proto.RegisterType((*CountingActor)(nil), "messages.CountingActor")
 }
 
 func init() { proto.RegisterFile("messages.proto", fileDescriptor_4dc296cbfe5ffcd5) }
 
 var fileDescriptor_4dc296cbfe5ffcd5 = []byte{
-	// 425 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x93, 0x3f, 0x6f, 0x9b, 0x40,
-	0x18, 0x87, 0x39, 0x08, 0x4e, 0x78, 0xd3, 0x50, 0x74, 0xea, 0x40, 0x33, 0x5c, 0x29, 0x13, 0x4b,
-	0x3d, 0xa4, 0x55, 0x55, 0x47, 0xa9, 0x2a, 0x27, 0x41, 0x15, 0x43, 0x9d, 0xe8, 0x42, 0x3e, 0x00,
-	0x2d, 0xa7, 0xd4, 0x6a, 0x0b, 0x08, 0x8e, 0x58, 0x6c, 0xfd, 0x08, 0x9d, 0xfb, 0x09, 0xfa, 0x51,
-	0x3a, 0x7a, 0xf4, 0x58, 0xe3, 0xa5, 0xa3, 0xa7, 0xce, 0x15, 0x07, 0xf8, 0x4f, 0xc4, 0xe2, 0x05,
-	0xdd, 0x7b, 0xfa, 0x3d, 0xcf, 0xcb, 0xab, 0x17, 0x40, 0xff, 0xc6, 0xb2, 0x2c, 0xb8, 0x63, 0x59,
-	0x3f, 0x49, 0x63, 0x1e, 0xe3, 0x83, 0xb6, 0xb6, 0x7f, 0x22, 0x50, 0xdd, 0x7b, 0x16, 0x71, 0xac,
-	0x83, 0x3c, 0x0e, 0x4d, 0x64, 0x21, 0x47, 0xa5, 0xf2, 0x38, 0xc4, 0x4f, 0x40, 0xbd, 0x0f, 0xbe,
-	0xe6, 0xcc, 0x94, 0x2d, 0xe4, 0x28, 0xb4, 0x2e, 0xf0, 0x0b, 0xd8, 0xe3, 0x45, 0xc2, 0x4c, 0xc5,
-	0x42, 0x8e, 0x7e, 0xf2, 0xb4, 0xbf, 0x12, 0x0b, 0x49, 0xfd, 0xf4, 0x8b, 0x84, 0x51, 0x11, 0xb3,
-	0xcf, 0x40, 0x5b, 0x5d, 0x61, 0x0d, 0x54, 0x6f, 0x74, 0x7d, 0xeb, 0x1b, 0x12, 0x06, 0xe8, 0x5d,
-	0xdd, 0xfa, 0xd5, 0x19, 0x55, 0xd7, 0x37, 0x17, 0xee, 0xc8, 0x35, 0x64, 0x7c, 0x04, 0x9a, 0x3f,
-	0xfc, 0x70, 0xed, 0x52, 0x6f, 0xf4, 0xde, 0x50, 0xec, 0x7f, 0x0a, 0x1c, 0xdc, 0x44, 0x41, 0x92,
-	0x7d, 0x8e, 0x39, 0x7e, 0x0d, 0x3d, 0x2f, 0x4a, 0x72, 0x9e, 0x99, 0xc8, 0x52, 0x9c, 0xc3, 0x13,
-	0xb2, 0xee, 0xdd, 0x66, 0xfa, 0x75, 0xc0, 0x8d, 0x78, 0x5a, 0xd0, 0x26, 0x8d, 0x07, 0xb0, 0x7f,
-	0x95, 0x73, 0x01, 0xca, 0x02, 0x7c, 0xd6, 0x01, 0x36, 0x89, 0x9a, 0x6c, 0xf3, 0xf8, 0x1d, 0x68,
-	0x34, 0x98, 0x34, 0x5d, 0x15, 0x01, 0x3f, 0xef, 0x80, 0x57, 0x99, 0x1a, 0x5f, 0x33, 0xf8, 0x1c,
-	0x80, 0x06, 0x93, 0xb6, 0xfd, 0x9e, 0x30, 0xd8, 0xdd, 0x86, 0xad, 0x37, 0xd8, 0xa0, 0x8e, 0x07,
-	0x70, 0xb8, 0x61, 0xc7, 0x06, 0x28, 0x5f, 0x58, 0xd1, 0xec, 0xa9, 0x3a, 0x76, 0x2f, 0xea, 0x54,
-	0x7e, 0x83, 0x8e, 0x4f, 0xe1, 0xd1, 0xa6, 0x76, 0x27, 0xf6, 0x0c, 0xf4, 0xed, 0xb9, 0x76, 0xa2,
-	0xdf, 0xc2, 0xe3, 0x07, 0x33, 0xed, 0x82, 0xdb, 0x03, 0x38, 0xba, 0x88, 0xf3, 0x88, 0x8f, 0xa3,
-	0xbb, 0xe1, 0x27, 0x1e, 0xa7, 0xd8, 0x84, 0xfd, 0x61, 0x18, 0xa6, 0x2c, 0xcb, 0x84, 0x40, 0xa3,
-	0x6d, 0x59, 0x7d, 0xb6, 0xde, 0xa5, 0x30, 0x68, 0x54, 0xf6, 0x2e, 0xcf, 0x5f, 0x4d, 0xe7, 0x44,
-	0x9a, 0xcd, 0x89, 0xb4, 0x9c, 0x13, 0xf4, 0xbd, 0x24, 0xe8, 0x57, 0x49, 0xd0, 0xef, 0x92, 0xa0,
-	0x69, 0x49, 0xd0, 0x9f, 0x92, 0xa0, 0xbf, 0x25, 0x91, 0x96, 0x25, 0x41, 0x3f, 0x16, 0x44, 0x9a,
-	0x2e, 0x88, 0x34, 0x5b, 0x10, 0xe9, 0x63, 0x4f, 0xfc, 0x17, 0x2f, 0xff, 0x07, 0x00, 0x00, 0xff,
-	0xff, 0xdf, 0x19, 0x62, 0x92, 0x29, 0x03, 0x00, 0x00,
+	// 495 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x94, 0x3f, 0x6f, 0xd3, 0x40,
+	0x18, 0x87, 0x7d, 0x76, 0xec, 0xd4, 0x6f, 0xda, 0x60, 0x4e, 0x0c, 0xa6, 0xc3, 0x11, 0x2c, 0x86,
+	0x2c, 0x64, 0x28, 0x08, 0x91, 0x0a, 0x54, 0xb9, 0xad, 0x05, 0x96, 0x68, 0x52, 0x5d, 0xdd, 0x81,
+	0xd1, 0x90, 0x53, 0xb0, 0x68, 0x6c, 0xcb, 0x76, 0x1a, 0x65, 0xe3, 0x03, 0x30, 0xf0, 0x2d, 0xe0,
+	0xa3, 0x30, 0x66, 0xec, 0x48, 0x9c, 0x85, 0xb1, 0x1f, 0x01, 0xe5, 0xfc, 0x27, 0x09, 0x58, 0x48,
+	0xe9, 0x12, 0xdd, 0xfb, 0xea, 0xf7, 0x3c, 0x77, 0xf7, 0xea, 0x62, 0x68, 0x8e, 0x58, 0x1c, 0xbb,
+	0x43, 0x16, 0x77, 0xc2, 0x28, 0x48, 0x02, 0xbc, 0x53, 0xd4, 0xc6, 0x77, 0x04, 0xb2, 0x75, 0xcd,
+	0xfc, 0x04, 0x37, 0x41, 0xf4, 0x06, 0x3a, 0x6a, 0xa1, 0xb6, 0x4c, 0x45, 0x6f, 0x80, 0x1f, 0x80,
+	0x7c, 0xed, 0x5e, 0x8d, 0x99, 0x2e, 0xb6, 0x50, 0x5b, 0xa2, 0x59, 0x81, 0x9f, 0x42, 0x2d, 0x99,
+	0x86, 0x4c, 0x97, 0x5a, 0xa8, 0xdd, 0x3c, 0x78, 0xd8, 0x29, 0xc5, 0x5c, 0x92, 0xfd, 0x3a, 0xd3,
+	0x90, 0x51, 0x1e, 0x33, 0x6c, 0x50, 0xcb, 0x16, 0x56, 0x41, 0xb6, 0x7b, 0xe7, 0x97, 0x8e, 0x26,
+	0x60, 0x00, 0xa5, 0x7f, 0xe9, 0x2c, 0xd7, 0x68, 0xd9, 0xbe, 0x38, 0xb1, 0x7a, 0x96, 0x26, 0xe2,
+	0x3d, 0x50, 0x1d, 0xf3, 0xec, 0xdc, 0xa2, 0x76, 0xef, 0x8d, 0x26, 0xe1, 0x06, 0xd4, 0xcd, 0x5e,
+	0xff, 0xcc, 0x7c, 0xf7, 0x5e, 0xab, 0x19, 0x5f, 0x15, 0xd8, 0xb9, 0xf0, 0xdd, 0x30, 0xfe, 0x14,
+	0x24, 0xf8, 0x05, 0x28, 0xb6, 0x1f, 0x8e, 0x93, 0x58, 0x47, 0x2d, 0xa9, 0xdd, 0x38, 0x20, 0xab,
+	0x83, 0x14, 0x99, 0x4e, 0x16, 0xb0, 0xfc, 0x24, 0x9a, 0xd2, 0x3c, 0x8d, 0xbb, 0x50, 0xef, 0x8f,
+	0x13, 0x0e, 0x8a, 0x1c, 0x7c, 0x54, 0x01, 0xe6, 0x89, 0x8c, 0x2c, 0xf2, 0xf8, 0x08, 0x54, 0xea,
+	0x4e, 0xf2, 0x5d, 0x25, 0x0e, 0x3f, 0xae, 0x80, 0xcb, 0x4c, 0x86, 0xaf, 0x18, 0x7c, 0x0c, 0x40,
+	0xdd, 0x49, 0xb1, 0x7d, 0x8d, 0x1b, 0x8c, 0x6a, 0xc3, 0xc6, 0x09, 0xd6, 0x28, 0xfc, 0x16, 0x76,
+	0xa9, 0x3b, 0x31, 0xfd, 0x60, 0xe4, 0x5e, 0x79, 0x2c, 0xd6, 0x65, 0x6e, 0x79, 0x52, 0x6d, 0x29,
+	0x63, 0x99, 0x67, 0x83, 0xcc, 0x4d, 0x8e, 0x3b, 0x0a, 0x59, 0xe4, 0xf9, 0x43, 0x5d, 0xf9, 0x9f,
+	0xa9, 0x8c, 0xad, 0x4c, 0x65, 0x6b, 0xbf, 0x0b, 0x8d, 0xb5, 0x1b, 0x63, 0x0d, 0xa4, 0xcf, 0x6c,
+	0x9a, 0x3f, 0xa4, 0xe5, 0xb2, 0xfa, 0x25, 0x1d, 0x8a, 0x2f, 0xd1, 0xfe, 0x21, 0xec, 0xae, 0x5f,
+	0x75, 0x2b, 0xf6, 0x15, 0x34, 0x37, 0x67, 0xbd, 0x15, 0xfd, 0x1a, 0xee, 0xfd, 0x35, 0xe7, 0xad,
+	0xf0, 0x23, 0xb8, 0xff, 0xcf, 0x80, 0xef, 0x20, 0xd8, 0x9c, 0xeb, 0x36, 0x02, 0xa3, 0x0b, 0x7b,
+	0x27, 0xc1, 0xd8, 0x4f, 0x3c, 0x7f, 0x68, 0x7e, 0x4c, 0x82, 0x08, 0xeb, 0x50, 0x37, 0x07, 0x83,
+	0x88, 0xc5, 0x31, 0x17, 0xa8, 0xb4, 0x28, 0x97, 0xff, 0x6c, 0xfb, 0x94, 0x1b, 0x54, 0x2a, 0xda,
+	0xa7, 0xc7, 0xcf, 0x67, 0x73, 0x22, 0xdc, 0xcc, 0x89, 0x70, 0x3b, 0x27, 0xe8, 0x4b, 0x4a, 0xd0,
+	0x8f, 0x94, 0xa0, 0x9f, 0x29, 0x41, 0xb3, 0x94, 0xa0, 0x5f, 0x29, 0x41, 0xbf, 0x53, 0x22, 0xdc,
+	0xa6, 0x04, 0x7d, 0x5b, 0x10, 0x61, 0xb6, 0x20, 0xc2, 0xcd, 0x82, 0x08, 0x1f, 0x14, 0xfe, 0xe9,
+	0x78, 0xf6, 0x27, 0x00, 0x00, 0xff, 0xff, 0x20, 0x70, 0x90, 0x0e, 0x4c, 0x04, 0x00, 0x00,
 }
 
 func (x Event_EventType) String() string {
@@ -362,6 +387,22 @@ func (this *Snapshot) Equal(that interface{}) bool {
 			return false
 		}
 	}
+	if len(this.RawAnomalies) != len(that1.RawAnomalies) {
+		return false
+	}
+	for i := range this.RawAnomalies {
+		if this.RawAnomalies[i] != that1.RawAnomalies[i] {
+			return false
+		}
+	}
+	if len(this.RawTampering) != len(that1.RawTampering) {
+		return false
+	}
+	for i := range this.RawTampering {
+		if this.RawTampering[i] != that1.RawTampering[i] {
+			return false
+		}
+	}
 	return true
 }
 func (this *CountingActor) Equal(that interface{}) bool {
@@ -407,7 +448,7 @@ func (this *Snapshot) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 8)
+	s := make([]string, 0, 10)
 	s = append(s, "&messages.Snapshot{")
 	keysForInputs := make([]int32, 0, len(this.Inputs))
 	for k, _ := range this.Inputs {
@@ -460,6 +501,32 @@ func (this *Snapshot) GoString() string {
 	mapStringForRawOutputs += "}"
 	if this.RawOutputs != nil {
 		s = append(s, "RawOutputs: "+mapStringForRawOutputs+",\n")
+	}
+	keysForRawAnomalies := make([]int32, 0, len(this.RawAnomalies))
+	for k, _ := range this.RawAnomalies {
+		keysForRawAnomalies = append(keysForRawAnomalies, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Int32s(keysForRawAnomalies)
+	mapStringForRawAnomalies := "map[int32]int64{"
+	for _, k := range keysForRawAnomalies {
+		mapStringForRawAnomalies += fmt.Sprintf("%#v: %#v,", k, this.RawAnomalies[k])
+	}
+	mapStringForRawAnomalies += "}"
+	if this.RawAnomalies != nil {
+		s = append(s, "RawAnomalies: "+mapStringForRawAnomalies+",\n")
+	}
+	keysForRawTampering := make([]int32, 0, len(this.RawTampering))
+	for k, _ := range this.RawTampering {
+		keysForRawTampering = append(keysForRawTampering, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Int32s(keysForRawTampering)
+	mapStringForRawTampering := "map[int32]int64{"
+	for _, k := range keysForRawTampering {
+		mapStringForRawTampering += fmt.Sprintf("%#v: %#v,", k, this.RawTampering[k])
+	}
+	mapStringForRawTampering += "}"
+	if this.RawTampering != nil {
+		s = append(s, "RawTampering: "+mapStringForRawTampering+",\n")
 	}
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -541,6 +608,36 @@ func (m *Snapshot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.RawTampering) > 0 {
+		for k := range m.RawTampering {
+			v := m.RawTampering[k]
+			baseI := i
+			i = encodeVarintMessages(dAtA, i, uint64(v))
+			i--
+			dAtA[i] = 0x10
+			i = encodeVarintMessages(dAtA, i, uint64(k))
+			i--
+			dAtA[i] = 0x8
+			i = encodeVarintMessages(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x32
+		}
+	}
+	if len(m.RawAnomalies) > 0 {
+		for k := range m.RawAnomalies {
+			v := m.RawAnomalies[k]
+			baseI := i
+			i = encodeVarintMessages(dAtA, i, uint64(v))
+			i--
+			dAtA[i] = 0x10
+			i = encodeVarintMessages(dAtA, i, uint64(k))
+			i--
+			dAtA[i] = 0x8
+			i = encodeVarintMessages(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x2a
+		}
+	}
 	if len(m.RawOutputs) > 0 {
 		for k := range m.RawOutputs {
 			v := m.RawOutputs[k]
@@ -708,6 +805,22 @@ func (m *Snapshot) Size() (n int) {
 			n += mapEntrySize + 1 + sovMessages(uint64(mapEntrySize))
 		}
 	}
+	if len(m.RawAnomalies) > 0 {
+		for k, v := range m.RawAnomalies {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + sovMessages(uint64(k)) + 1 + sovMessages(uint64(v))
+			n += mapEntrySize + 1 + sovMessages(uint64(mapEntrySize))
+		}
+	}
+	if len(m.RawTampering) > 0 {
+		for k, v := range m.RawTampering {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + sovMessages(uint64(k)) + 1 + sovMessages(uint64(v))
+			n += mapEntrySize + 1 + sovMessages(uint64(mapEntrySize))
+		}
+	}
 	return n
 }
 
@@ -790,11 +903,33 @@ func (this *Snapshot) String() string {
 		mapStringForRawOutputs += fmt.Sprintf("%v: %v,", k, this.RawOutputs[k])
 	}
 	mapStringForRawOutputs += "}"
+	keysForRawAnomalies := make([]int32, 0, len(this.RawAnomalies))
+	for k, _ := range this.RawAnomalies {
+		keysForRawAnomalies = append(keysForRawAnomalies, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Int32s(keysForRawAnomalies)
+	mapStringForRawAnomalies := "map[int32]int64{"
+	for _, k := range keysForRawAnomalies {
+		mapStringForRawAnomalies += fmt.Sprintf("%v: %v,", k, this.RawAnomalies[k])
+	}
+	mapStringForRawAnomalies += "}"
+	keysForRawTampering := make([]int32, 0, len(this.RawTampering))
+	for k, _ := range this.RawTampering {
+		keysForRawTampering = append(keysForRawTampering, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Int32s(keysForRawTampering)
+	mapStringForRawTampering := "map[int32]int64{"
+	for _, k := range keysForRawTampering {
+		mapStringForRawTampering += fmt.Sprintf("%v: %v,", k, this.RawTampering[k])
+	}
+	mapStringForRawTampering += "}"
 	s := strings.Join([]string{`&Snapshot{`,
 		`Inputs:` + mapStringForInputs + `,`,
 		`Outputs:` + mapStringForOutputs + `,`,
 		`RawInputs:` + mapStringForRawInputs + `,`,
 		`RawOutputs:` + mapStringForRawOutputs + `,`,
+		`RawAnomalies:` + mapStringForRawAnomalies + `,`,
+		`RawTampering:` + mapStringForRawTampering + `,`,
 		`}`,
 	}, "")
 	return s
@@ -1349,6 +1484,204 @@ func (m *Snapshot) Unmarshal(dAtA []byte) error {
 				}
 			}
 			m.RawOutputs[mapkey] = mapvalue
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RawAnomalies", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMessages
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthMessages
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthMessages
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.RawAnomalies == nil {
+				m.RawAnomalies = make(map[int32]int64)
+			}
+			var mapkey int32
+			var mapvalue int64
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowMessages
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowMessages
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						mapkey |= int32(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+				} else if fieldNum == 2 {
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowMessages
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						mapvalue |= int64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipMessages(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthMessages
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.RawAnomalies[mapkey] = mapvalue
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RawTampering", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMessages
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthMessages
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthMessages
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.RawTampering == nil {
+				m.RawTampering = make(map[int32]int64)
+			}
+			var mapkey int32
+			var mapvalue int64
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowMessages
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowMessages
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						mapkey |= int32(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+				} else if fieldNum == 2 {
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowMessages
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						mapvalue |= int64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipMessages(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthMessages
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.RawTampering[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

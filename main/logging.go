@@ -4,7 +4,7 @@ import (
 	"log"
 	"log/syslog"
 
-	"github.com/dumacp/go-counterpass/logs"
+	"github.com/dumacp/go-logs/pkg/logs"
 )
 
 func newLog(logger *logs.Logger, prefix string, flags int, priority int) error {
@@ -18,17 +18,18 @@ func newLog(logger *logs.Logger, prefix string, flags int, priority int) error {
 }
 
 func initLogs(debug, logStd bool) {
+
 	defer func() {
-		if !debug {
-			logs.LogBuild.Disable()
+		if debug {
+			return
 		}
+		logs.LogBuild.Disable()
 	}()
 	if logStd {
 		return
 	}
-	newLog(logs.LogInfo, "[ warn ] ", log.LstdFlags, 4)
-	newLog(logs.LogWarn, "[ info ] ", log.LstdFlags, 6)
-	newLog(logs.LogError, "[ build ] ", log.LstdFlags, 7)
-	newLog(logs.LogBuild, "[ error ] ", log.LstdFlags, 3)
-
+	newLog(logs.LogInfo, "[ info ] ", log.LstdFlags, 6)
+	newLog(logs.LogWarn, "[ warn ] ", log.LstdFlags, 4)
+	newLog(logs.LogError, "[ error ] ", log.LstdFlags, 3)
+	newLog(logs.LogBuild, "[ build ] ", log.LstdFlags, 7)
 }

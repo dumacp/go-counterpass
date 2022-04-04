@@ -20,6 +20,7 @@ message Event {
 		OUTPUT = 1;
 		SCENE = 2;
 		TAMPERING = 3;
+		ANOMALY = 4;
 	}
 	EventType type = 3;	
 }
@@ -28,7 +29,9 @@ message Snapshot {
 	map<int32,int64> Inputs = 1;
 	map<int32,int64> Outputs = 2;
 	map<int32,int64> RawInputs = 3;
-	map<int32,int64> RawOutputs = 4; 
+	map<int32,int64> RawOutputs = 4;
+	map<int32,int64> RawAnomalies = 5; 
+	map<int32,int64> RawTampering = 6; 
 }
 
 message CountingActor {
