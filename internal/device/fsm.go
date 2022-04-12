@@ -69,6 +69,7 @@ func (a *Actor) Fsm() {
 			}
 			if err != nil {
 				e.Cancel(err)
+				a.ctx.Send(a.ctx.Self(), &StartDevice{})
 				return
 			}
 			a.ctx.Send(a.ctx.Self(), &MsgDevice{Device: disp})

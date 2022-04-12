@@ -61,7 +61,6 @@ func (a *Actor) Receive(ctx actor.Context) {
 	case *StartDevice:
 		if err := a.fmachinae.Event(eStarted); err != nil {
 			logs.LogError.Printf("open device error: %s", err)
-			a.fmachinae.Event(eStarted)
 		}
 	case *MsgDevice:
 		a.fmachinae.Event(eOpenned)

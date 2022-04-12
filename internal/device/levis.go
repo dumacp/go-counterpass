@@ -1,4 +1,5 @@
 // +build beane !ingnovus
+// +build beane !optocontrol
 
 package device
 

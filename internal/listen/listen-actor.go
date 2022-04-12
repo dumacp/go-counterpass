@@ -59,7 +59,7 @@ func subscribe(ctx actor.Context, evs *eventstream.EventStream) {
 	}
 	evs.SubscribeWithPredicate(fn, func(evt interface{}) bool {
 		switch evt.(type) {
-		case *MsgListenError, *messages.Event:
+		case *MsgListenError, *messages.Event, *device.CloseDevice, *device.StartDevice:
 			return true
 		}
 		return false
@@ -112,10 +112,12 @@ func (a *ListenActor) Receive(ctx actor.Context) {
 	case *MsgListenError:
 		if a.evts != nil {
 			a.evts.Publish(msg)
+			a.evts.Publish(&device.StopDevice{})
+			a.evts.Publish(&device.StartDevice{})
 		}
 		// ctx.Send(ctx.Parent(), &msgPingError{})
-		time.Sleep(3 * time.Second)
-		logs.LogError.Panicln("listen error")
+		// time.Sleep(3 * time.Second)
+		logs.LogError.Println("listen error")
 	case *MsgToTest:
 		logs.LogBuild.Printf("test frame: %s", msg.Data)
 	case *MsgLogRequest:

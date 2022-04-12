@@ -1,6 +1,7 @@
 //+build beane !ingnovus
 //+build beane !bea
 //+build beane !sonar
+//+build beane !optocontrol
 
 package listen
 
