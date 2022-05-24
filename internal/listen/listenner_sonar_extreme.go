@@ -1,4 +1,4 @@
-//+build optocontrol
+//+build extreme
 
 package listen
 
@@ -13,7 +13,7 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/messages"
 	"github.com/dumacp/go-logs/pkg/logs"
-	"github.com/dumacp/go-optocontrol"
+	"github.com/dumacp/sonar/ins50"
 )
 
 var timeout_samples int
@@ -29,9 +29,9 @@ const (
 func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
 	timeout := time.Duration(timeout_samples) * time.Millisecond
 
-	var devv optocontrol.Device
+	var devv ins50.Device
 
-	if v, ok := dev.(optocontrol.Device); !ok {
+	if v, ok := dev.(ins50.Device); !ok {
 		return fmt.Errorf("device is not optocontrol device")
 	} else {
 		devv = v
@@ -54,25 +54,10 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 	go func(ctx *actor.RootContext, self *actor.PID) {
 		defer ctx.Send(self, &MsgListenError{})
 		countErr := 0
-		var ch1 <-chan time.Time
-		var ch2 <-chan time.Time
-		if typeCounter == 0 || typeCounter == 1 {
-			tick1 := time.NewTicker(timeout)
-			defer tick1.Stop()
-			ch1 = tick1.C
-		} else {
-			ch1 = make(<-chan time.Time)
-		}
-		if typeCounter == 0 {
-			time.Sleep(time.Duration(timeout_samples/5) * time.Millisecond)
-		}
-		if typeCounter == 0 || typeCounter == 2 {
-			tick2 := time.NewTicker(timeout)
-			defer tick2.Stop()
-			ch2 = tick2.C
-		} else {
-			ch2 = make(<-chan time.Time)
-		}
+		tick1 := time.NewTicker(timeout)
+		defer tick1.Stop()
+		ch1 := tick1.C
+
 		for {
 			select {
 			case <-quit:
@@ -81,8 +66,8 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 			case <-ch1:
 				tn := time.Now()
 				fmt.Printf("%s, request (1)\n", time.Now().Format("02-01-2006 15:04:05.000"))
-				id := 0
-				result, err := devv.ReadData(optocontrol.DOOR_1)
+
+				result, err := devv.ReadData()
 				if err != nil {
 					logs.LogWarn.Println(err)
 					if errors.Is(err, io.EOF) {
@@ -101,90 +86,60 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 				fmt.Printf("%s: result readbytes (1): %+v\n",
 					time.Now().Format("02-01-2006 15:04:05.000"), result)
 
-				inputs := result.AdultUp
-				outputs := result.AdultDown
-				tampering := result.Locks
-
 				// fmt.Printf("inputs (1): %d\n", inputs)
-				if inputs > 0 && inputs != inputsFront {
+				id := 0
+				if result.Inputs1() > 0 && uint(result.Inputs1()) != inputsFront {
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
-						Value: int64(inputs),
+						Value: int64(result.Inputs1()),
 						Type:  messages.INPUT,
 					})
 				}
-				inputsFront = inputs
-				if outputs > 0 && outputs != outputsFront {
+				inputsFront = uint(result.Inputs1())
+				if result.Outputs1() > 0 && uint(result.Outputs1()) != outputsFront {
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
-						Value: int64(outputs),
+						Value: int64(result.Outputs1()),
 						Type:  messages.OUTPUT,
 					})
 				}
-				outputsFront = outputs
-
-				if tampering > 0 && tampering != tamperingFront {
+				outputsFront = uint(result.Outputs1())
+				if result.Locks1() > 0 && uint(result.Locks1()) != tamperingFront {
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
-						Value: int64(tampering),
+						Value: int64(result.Locks1()),
 						Type:  messages.TAMPERING,
 					})
 				}
-				tamperingFront = tampering
+				tamperingFront = uint(result.Locks1())
 
-			case <-ch2:
-				tn := time.Now()
-				fmt.Printf("%s, request (2)\n", time.Now().Format("02-01-2006 15:04:05.000"))
-				id := 1
-				result, err := devv.ReadData(optocontrol.DOOR_2)
-				if err != nil {
-					logs.LogWarn.Println(err)
-					if errors.Is(err, io.EOF) {
-						if time.Since(tn) < timeout/10 {
-							countErr++
-						}
-					} else {
-						countErr++
-					}
-					log.Println(err)
-					if countErr > max_error {
-						return
-					}
-					break
-				}
-				fmt.Printf("%s: result readbytes (2): %+v\n",
-					time.Now().Format("02-01-2006 15:04:05.000"), result)
-
-				inputs := result.AdultUp
-				outputs := result.AdultDown
-				tampering := result.Locks
-
-				// fmt.Printf("inputs (2): %d\n", inputs)
-				if inputs > 0 && inputs != inputsBack {
+				id = 1
+				if result.Inputs2() > 0 && uint(result.Inputs2()) != inputsBack {
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
-						Value: int64(inputs),
+						Value: int64(result.Inputs2()),
 						Type:  messages.INPUT,
 					})
 				}
-				inputsBack = inputs
-				if outputs > 0 && outputs != outputsBack {
+				inputsBack = uint(result.Inputs2())
+				if result.Outputs2() > 0 && uint(result.Outputs2()) != outputsBack {
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
-						Value: int64(outputs),
+						Value: int64(result.Outputs2()),
 						Type:  messages.OUTPUT,
 					})
 				}
-				outputsBack = outputs
+				outputsBack = uint(result.Outputs2())
 
-				if tampering > 0 && tampering != tamperingBack {
+				if result.Locks2() > 0 && uint(result.Locks1()) != tamperingBack {
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
-						Value: int64(tampering),
+						Value: int64(result.Locks2()),
 						Type:  messages.TAMPERING,
 					})
 				}
-				tamperingBack = tampering
+				tamperingBack = uint(result.Locks2())
+
 			}
 		}
 	}(rootctx, self)

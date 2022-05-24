@@ -19,7 +19,7 @@ func init() {
 	flag.IntVar(&timeout_samples, "timeout", 900, "timeout samples in millis")
 }
 
-func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int) error {
+func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	var devv ingnovus.Device
 

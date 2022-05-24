@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	showVersion = "2.0.4"
+	showVersion = "2.0.6"
 )
 
 var debug bool
@@ -164,6 +164,11 @@ func main() {
 		pidListen,
 		&listen.Subscribe{},
 		pidCounting)
+
+	rootContext.RequestWithCustomSender(
+		pidListen,
+		&listen.Subscribe{},
+		pidDevice)
 
 	rootContext.RequestWithCustomSender(
 		pidCounting,

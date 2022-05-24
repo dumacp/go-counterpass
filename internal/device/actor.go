@@ -1,6 +1,7 @@
 package device
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -50,7 +51,8 @@ func subscribe(ctx actor.Context, evs *eventstream.EventStream) {
 }
 
 func (a *Actor) Receive(ctx actor.Context) {
-	// fmt.Printf("actor \"%s\", message: %v\n", ctx.Self().GetId(), ctx.Message())
+	fmt.Printf("actor \"%s\", message: %v, %T\n", ctx.Self().GetId(),
+		ctx.Message(), ctx.Message())
 	a.ctx = ctx
 
 	switch msg := ctx.Message().(type) {

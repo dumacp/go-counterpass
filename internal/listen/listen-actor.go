@@ -1,6 +1,7 @@
 package listen
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -31,7 +32,7 @@ type ListenActor struct {
 }
 
 //NewListen create listen actor
-func NewListen(typeCounter int) *ListenActor {
+func NewListen(typeCounter int) actor.Actor {
 	act := &ListenActor{}
 	act.typeCounter = typeCounter
 	// act.countingActor = countingActor
@@ -59,7 +60,7 @@ func subscribe(ctx actor.Context, evs *eventstream.EventStream) {
 	}
 	evs.SubscribeWithPredicate(fn, func(evt interface{}) bool {
 		switch evt.(type) {
-		case *MsgListenError, *messages.Event, *device.CloseDevice, *device.StartDevice:
+		case *MsgListenError, *messages.Event, *device.CloseDevice, *device.StartDevice, *device.StopDevice:
 			return true
 		}
 		return false
@@ -76,8 +77,8 @@ func (act *ListenActor) Test(test bool) {
 
 //Receive func Receive in actor
 func (a *ListenActor) Receive(ctx actor.Context) {
-	// fmt.Printf("actor \"%s\", message: %v, %T\n", ctx.Self().GetId(),
-	// 	ctx.Message(), ctx.Message())
+	fmt.Printf("actor \"%s\", message: %v, %T\n", ctx.Self().GetId(),
+		ctx.Message(), ctx.Message())
 	a.context = ctx
 	switch msg := ctx.Message().(type) {
 	case *actor.Stopped:
@@ -104,10 +105,13 @@ func (a *ListenActor) Receive(ctx actor.Context) {
 
 		a.quit = make(chan int)
 
-		if err := Listen(msg.Device, a.quit, ctx, a.typeCounter); err != nil {
+		if err := Listen(msg.Device, a.quit, ctx, a.typeCounter, a.sendConsole); err != nil {
 			logs.LogError.Println(err)
+			time.Sleep(1 * time.Second)
+			ctx.Send(ctx.Self(), &MsgListenError{})
 			break
 		}
+		logs.LogInfo.Println("listen started")
 		a.device = msg.Device
 	case *MsgListenError:
 		if a.evts != nil {

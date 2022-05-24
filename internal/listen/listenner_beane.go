@@ -2,13 +2,16 @@
 //+build beane !bea
 //+build beane !sonar
 //+build beane !optocontrol
+//+build beane !extreme
 
 package listen
 
 import (
 	"encoding/binary"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -20,11 +23,15 @@ import (
 
 var timeout_samples int
 
+const (
+	max_error = 3
+)
+
 func init() {
 	flag.IntVar(&timeout_samples, "timeout", 900, "timeout samples in millis")
 }
 
-func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int) error {
+func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	timeout := time.Duration(timeout_samples) * time.Millisecond
 
@@ -71,19 +78,31 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 		} else {
 			ch2 = make(<-chan time.Time)
 		}
+		countErr := 0
 		for {
 			select {
 			case <-quit:
 				logs.LogWarn.Println("device levis is closed")
 				return
 			case <-ch1:
+				tn := time.Now()
 				fmt.Printf("%s, request (1)\n", time.Now().Format("02-01-2006 15:04:05.000"))
 				id := 0
 				devv.SetSlaveID(1)
 				result, err := devv.ReadBytesRegister(0x0001, 22/2)
 				if err != nil {
-					// logs.LogWarn.Println(err)
+					logs.LogWarn.Println(err)
+					if errors.Is(err, io.EOF) {
+						if time.Since(tn) < timeout/10 {
+							countErr++
+						}
+					} else {
+						countErr++
+					}
 					log.Println(err)
+					if countErr > max_error {
+						return
+					}
 					break
 				}
 				fmt.Printf("%s: result readbytes (1): [% X], len: %d\n",
@@ -144,14 +163,24 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 				alarmCacheFront = alarm
 
 			case <-ch2:
-
+				tn := time.Now()
 				fmt.Printf("%s, request (2)\n", time.Now().Format("02-01-2006 15:04:05.000"))
 				id := 1
 				devv.SetSlaveID(2)
 				result, err := devv.ReadBytesRegister(0x0001, (22)/2)
 				if err != nil {
-					// logs.LogWarn.Println(err)
+					logs.LogWarn.Println(err)
+					if errors.Is(err, io.EOF) {
+						if time.Since(tn) < timeout/10 {
+							countErr++
+						}
+					} else {
+						countErr++
+					}
 					log.Println(err)
+					if countErr > max_error {
+						return
+					}
 					break
 				}
 				fmt.Printf("%s: result readbytes (2): [% X], len: %d\n",

@@ -56,9 +56,15 @@ func (a *Actor) Fsm() {
 		beforeEvent(eStarted): func(e *fsm.Event) {
 			var err error
 
+			dev, ok := disp.(Device)
+			if ok {
+				dev.Close()
+			}
+
 			for range []int{0, 1, 2} {
 				disp, err = NewDevice(a.portSerial, a.speedBaud)
 				if err == nil {
+					fmt.Printf("open serial error = %s\n", err)
 					break
 				}
 				dev, ok := disp.(Device)
@@ -90,7 +96,7 @@ func (a *Actor) Fsm() {
 		fsm.Events{
 			{
 				Name: eStarted,
-				Src:  []string{sStart, sClose},
+				Src:  []string{sStart, sClose, sStop},
 				Dst:  sOpen,
 			},
 			{

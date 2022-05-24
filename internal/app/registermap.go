@@ -19,7 +19,12 @@ func registersMap(inputs, outputs, anomalies, tampering map[int32]int64, tp int)
 	switch tp {
 	case 2:
 		switch VendorCounter {
-		case "beane", "ingnovus":
+		case "sonar":
+			reg.Inputs1 = inputs[0]
+			reg.Outputs1 = outputs[0]
+			reg.Anomalies1 = anomalies[0]
+			reg.Tampering1 = tampering[0]
+		default:
 			// reg.Inputs0 = inputs[0]
 			// reg.Outputs0 = outputs[0]
 			// reg.Anomalies0 = anomalies[0]
@@ -28,15 +33,6 @@ func registersMap(inputs, outputs, anomalies, tampering map[int32]int64, tp int)
 			reg.Outputs1 = outputs[1]
 			reg.Anomalies1 = anomalies[1]
 			reg.Tampering1 = tampering[1]
-		default:
-			// reg.Inputs0 = inputs[0]
-			// reg.Outputs0 = outputs[0]
-			// reg.Anomalies0 = anomalies[0]
-			// reg.Tampering0 = tampering[0]
-			reg.Inputs0 = inputs[1]
-			reg.Outputs0 = outputs[1]
-			reg.Anomalies0 = anomalies[1]
-			reg.Tampering0 = tampering[1]
 		}
 	case 1:
 		reg.Inputs0 = inputs[0]
