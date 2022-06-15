@@ -36,7 +36,7 @@ func leaveState(state string) string {
 
 func (a *Actor) Fsm() {
 
-	var disp interface{}
+	var disp Device
 	callbacksfsm := fsm.Callbacks{
 		"before_event": func(e *fsm.Event) {
 			if e.Err != nil {
@@ -51,14 +51,13 @@ func (a *Actor) Fsm() {
 			}
 		},
 		"enter_state": func(e *fsm.Event) {
-			logs.LogBuild.Printf("FSM APP, state src: %s, state dst: %s", e.Src, e.Dst)
+			logs.LogBuild.Printf("FSM APP DEVICE, state src: %s, state dst: %s", e.Src, e.Dst)
 		},
 		beforeEvent(eStarted): func(e *fsm.Event) {
 			var err error
 
-			dev, ok := disp.(Device)
-			if ok {
-				dev.Close()
+			if disp != nil {
+				disp.Close()
 			}
 
 			for range []int{0, 1, 2} {
@@ -67,9 +66,8 @@ func (a *Actor) Fsm() {
 					fmt.Printf("open serial error = %s\n", err)
 					break
 				}
-				dev, ok := disp.(Device)
-				if ok {
-					dev.Close()
+				if disp != nil {
+					disp.Close()
 				}
 				time.Sleep(3 * time.Second)
 			}

@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	showVersion = "2.0.6"
+	showVersion = "2.0.7"
 )
 
 var debug bool
@@ -219,7 +219,7 @@ func main() {
 	logs.LogInfo.Printf("back door counter START --  version: %s\n", showVersion)
 
 	go func() {
-		t1 := time.NewTicker(20 * time.Second)
+		t1 := time.NewTicker(6 * time.Second)
 		defer t1.Stop()
 		for range t1.C {
 			rootContext.Send(pidCounting, &app.MsgSendRegisters{})

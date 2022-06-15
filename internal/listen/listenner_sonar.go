@@ -1,3 +1,4 @@
+//go:build sonar
 // +build sonar
 
 package listen
@@ -24,10 +25,10 @@ type mem struct {
 
 func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
-	var devv contador.Device
+	var devv *contador.Device
 
-	if v, ok := dev.(contador.Device); !ok {
-		return fmt.Errorf("device is not sonar device")
+	if v, ok := dev.(*contador.Device); !ok {
+		return fmt.Errorf("device is not sonar device, %T", dev)
 	} else {
 		devv = v
 	}
@@ -38,7 +39,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 	memm.inputs = make([]int64, 2)
 	memm.outputs = make([]int64, 2)
 	memm.locks = make([]int64, 2)
-	memm.raw = make([]int64, 2)
+	memm.raw = make([]int64, 15)
 
 	queue := new(list.List)
 
@@ -48,7 +49,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 	rootctx := ctx.ActorSystem().Root
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
-		defer ctx.Send(Self, &MsgListenError{})
+		defer ctx.Send(self, &MsgListenError{})
 		for v := range ch {
 			if bytes.Contains(v, []byte("RPT")) {
 				if first {
@@ -60,7 +61,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					e := queue.Front()
 					queue.Remove(e)
 				}
-				processData(ctx, pid*actor.PID, v, memm, typeCounter)
+				processData(ctx, self, v, memm, typeCounter)
 				if externalConsole {
 					devv.Send([]byte(v))
 				}
@@ -71,7 +72,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 	return nil
 }
 
-func processData(ctx actor.Context, pid *actor.PID, v []byte, mem *mem, counterType int) {
+func processData(ctx *actor.RootContext, pid *actor.PID, v []byte, mem *mem, counterType int) {
 
 	split := strings.Split(string(v), ";")
 	if len(split) < 17 {
@@ -112,7 +113,7 @@ func processData(ctx actor.Context, pid *actor.PID, v []byte, mem *mem, counterT
 		if len(mem.raw) <= 0 || data[2] > mem.raw[2] {
 			enters := data[2]
 			if diff := enters - mem.inputs[1]; diff > 0 || len(mem.raw) <= 0 {
-				sendEvent(ctx, counterType, &messages.Event{Id: 1, Type: messages.INPUT, Value: enters})
+				sendEvent(ctx, pid, counterType, &messages.Event{Id: 1, Type: messages.INPUT, Value: enters})
 			}
 			mem.inputs[1] = enters
 		}
@@ -133,7 +134,7 @@ func processData(ctx actor.Context, pid *actor.PID, v []byte, mem *mem, counterT
 			if data[10] > mem.raw[10] {
 				enters := data[10]
 				if diff := enters - mem.locks[0]; diff > 0 {
-					sendEvent(ctx, counterType, &messages.Event{
+					sendEvent(ctx, pid, counterType, &messages.Event{
 						Id: id, Type: messages.TAMPERING, Value: enters})
 				}
 				mem.locks[0] = enters
@@ -174,12 +175,11 @@ func processData(ctx actor.Context, pid *actor.PID, v []byte, mem *mem, counterT
 	mem.raw = data
 }
 
-func sendEvent(ctx actor.Context, pid *actor.PID, tp int, msg *messages.Event) {
-	idPuerta := id
+func sendEvent(ctx *actor.RootContext, pid *actor.PID, tp int, msg *messages.Event) {
 	switch {
-	case tp == 2 && mgs.Id == 0:
-		idPuerta = 1
-	case tp == 2 && mgs.Id == 1:
+	case tp == 2 && msg.Id == 0:
+		msg.Id = 1
+	case tp == 2 && msg.Id == 1:
 		return
 	}
 	ctx.Send(pid, msg)

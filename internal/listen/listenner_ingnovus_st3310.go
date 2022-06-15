@@ -1,5 +1,5 @@
-//go:build extreme
-// +build extreme
+//go:build st3310
+// +build st3310
 
 package listen
 
@@ -13,14 +13,14 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/messages"
+	"github.com/dumacp/go-ingnovus/st3310"
 	"github.com/dumacp/go-logs/pkg/logs"
-	"github.com/dumacp/sonar/ins50"
 )
 
 var timeout_samples int
 
 func init() {
-	flag.IntVar(&timeout_samples, "timeout", 3000, "timeout samples in millis")
+	flag.IntVar(&timeout_samples, "timeout", 300, "timeout samples in millis")
 }
 
 const (
@@ -28,12 +28,13 @@ const (
 )
 
 func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
-	var devv ins50.Device
+	var devv st3310.Device
 
-	if v, ok := dev.(ins50.Device); !ok {
-		return fmt.Errorf("device is not sonar_extreme device")
+	if v, ok := dev.(st3310.Device); !ok {
+		return fmt.Errorf("device is not ingnovus st3310 device")
 	} else {
 		devv = v
 	}
@@ -64,13 +65,13 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 		for {
 			select {
 			case <-quit:
-				logs.LogWarn.Println("device sonar_extreme is closed")
+				logs.LogWarn.Println("device ingnovus st3310 is closed")
 				return
 			case <-ch1:
 				tn := time.Now()
 				fmt.Printf("%s, request (1)\n", time.Now().Format("02-01-2006 15:04:05.000"))
 
-				result, err := devv.ReadData()
+				result, err := devv.Read()
 				if err != nil {
 					logs.LogWarn.Println(err)
 					if errors.Is(err, io.EOF) {
@@ -89,6 +90,10 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 				countErr = 0
 				fmt.Printf("%s: result readbytes (1): %+v\n",
 					time.Now().Format("02-01-2006 15:04:05.000"), result)
+
+				if result == nil {
+					break
+				}
 
 				// fmt.Printf("inputs (1): %d\n", inputs)
 				id := 0
@@ -135,7 +140,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 				}
 				outputsBack = uint(result.Outputs2())
 
-				if result.Locks2() > 0 && uint(result.Locks2()) != tamperingBack {
+				if result.Locks2() > 0 && uint(result.Locks1()) != tamperingBack {
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Locks2()),

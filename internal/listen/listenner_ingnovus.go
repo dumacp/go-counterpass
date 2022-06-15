@@ -1,4 +1,5 @@
-//+build ingnovus
+//go:build ingnovus
+// +build ingnovus
 
 package listen
 
@@ -12,12 +13,6 @@ import (
 	"github.com/dumacp/go-ingnovus"
 	"github.com/dumacp/go-logs/pkg/logs"
 )
-
-var timeout_samples int
-
-func init() {
-	flag.IntVar(&timeout_samples, "timeout", 900, "timeout samples in millis")
-}
 
 func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
 

@@ -1,16 +1,16 @@
-//go:build extreme
-// +build extreme
+//go:build logirastreo
+// +build logirastreo
 
 package device
 
 import (
 	"time"
 
-	"github.com/dumacp/sonar/ins50"
+	logirastreo "github.com/dumacp/go-logirastreo/v1"
 )
 
 func NewDevice(port string, speed int) (Device, error) {
-	dev := ins50.NewDevice(port, speed, 1*time.Second)
+	dev := logirastreo.NewDevice(port, speed, 3*time.Second)
 
 	if err := dev.Open(); err != nil {
 		return nil, err

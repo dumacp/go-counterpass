@@ -102,6 +102,8 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 		a.outputs = make(map[int32]int64)
 		a.rawInputs = make(map[int32]int64)
 		a.rawOutputs = make(map[int32]int64)
+		a.anomalies = make(map[int32]int64)
+		a.tampering = make(map[int32]int64)
 		a.rawAnomalies = make(map[int32]int64)
 		a.rawTampering = make(map[int32]int64)
 		// a.initlogs.logs.Logs()
@@ -125,6 +127,8 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 			RawOutputs:   a.rawOutputs,
 			RawAnomalies: a.rawAnomalies,
 			RawTampering: a.rawTampering,
+			Anomalies:    a.anomalies,
+			Tampering:    a.tampering,
 		}
 		if !a.disablePersistence {
 			a.PersistSnapshot(snap)
@@ -187,6 +191,12 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 		if msg.GetRawOutputs() != nil {
 			a.rawOutputs = msg.GetRawOutputs()
 		}
+		if msg.GetAnomalies() != nil {
+			a.anomalies = msg.GetRawAnomalies()
+		}
+		if msg.GetTampering() != nil {
+			a.tampering = msg.GetRawTampering()
+		}
 		if msg.GetRawAnomalies() != nil {
 			a.rawAnomalies = msg.GetRawAnomalies()
 		}
@@ -215,6 +225,8 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 			RawOutputs:   a.rawOutputs,
 			RawAnomalies: a.rawAnomalies,
 			RawTampering: a.rawTampering,
+			Anomalies:    a.anomalies,
+			Tampering:    a.tampering,
 		}
 		if !a.disablePersistence {
 			a.PersistSnapshot(snap)
@@ -261,7 +273,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 				if v, ok := a.puertas[uint(id)]; a.disableDoorGpio || !ok || v == a.openState[id] {
 					a.inputs[id] += diff
 
-					data, err := buildEventPass(ctx, id, msg.GetType(), diff, a.pidGps, a.puertas)
+					data, err := buildEventPass(ctx, id, msg.GetType(), diff, a.pidGps, a.puertas, msg.Raw)
 					if err != nil {
 						logs.LogWarn.Println(err)
 						break
@@ -276,8 +288,8 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 			} else if diff > -5 && diff < 0 {
 				logs.LogWarn.Printf("diff is negative -> msg.GetValue(): %d, a.rawInputs[id]: %d", msg.GetValue(), a.rawInputs[id])
 
-				a.inputs[id] += Abs(diff)
-				data, err := buildEventPass(ctx, id, msg.GetType(), diff, a.pidGps, a.puertas)
+				a.inputs[id] += 1
+				data, err := buildEventPass(ctx, id, msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
 				if err != nil {
 					logs.LogWarn.Println(err)
 					break
@@ -285,7 +297,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 				if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
 					pubsub.Publish(topicCounterEvent, data)
 				}
-			} else {
+			} else if diff != 0 {
 				logs.LogError.Printf("diff is greater than 60 or less than -5 -> msg.GetValue(): %d, a.rawInputs[id]:: %d", msg.GetValue(), a.rawInputs[id])
 			}
 
@@ -308,7 +320,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 			} else if diff > 0 && diff < 60 {
 				if v, ok := a.puertas[uint(id)]; a.disableDoorGpio || !ok || v == a.openState[id] {
 					a.outputs[id] += diff
-					data, err := buildEventPass(ctx, id, msg.GetType(), diff, a.pidGps, a.puertas)
+					data, err := buildEventPass(ctx, id, msg.GetType(), diff, a.pidGps, a.puertas, msg.Raw)
 					if err != nil {
 						logs.LogWarn.Println(err)
 						break
@@ -325,8 +337,8 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 				// a.outputs[id] += msg.GetValue()
 				logs.LogWarn.Printf("diff is negative -> msg.GetValue(): %d, a.rawOutputs[id]: %d", msg.GetValue(), a.rawOutputs[id])
 
-				a.outputs[id] += Abs(diff)
-				data, err := buildEventPass(ctx, id, msg.GetType(), diff, a.pidGps, a.puertas)
+				a.outputs[id] += 1
+				data, err := buildEventPass(ctx, id, msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
 				if err != nil {
 					logs.LogWarn.Println(err)
 					break
@@ -334,7 +346,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 				if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
 					pubsub.Publish(topicCounterEvent, data)
 				}
-			} else {
+			} else if diff != 0 {
 				logs.LogError.Printf("diff is greater than 60 or less than -5 -> msg.GetValue(): %d, a.rawOutputs[id]: %d", msg.GetValue(), a.rawOutputs[id])
 			}
 			a.rawOutputs[id] = msg.GetValue()
@@ -342,8 +354,19 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 			id := msg.Id
 			logs.LogWarn.Println("shelteralarm")
 			diff := msg.GetValue() - a.rawTampering[id]
-			if diff > 0 && diff <= 5 {
-				data, err := buildEventTampering(ctx, msg.Id, diff, a.pidGps, a.puertas)
+			if diff > 0 && diff < 60 {
+				a.tampering[id] += diff
+				data, err := buildEventTampering(ctx, msg.Id, diff, a.pidGps, a.puertas, msg.Raw)
+				if err != nil {
+					logs.LogWarn.Println(err)
+					break
+				}
+				if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
+					pubsub.Publish(topicEvents, data)
+				}
+			} else if diff != 0 {
+				a.tampering[id] += 1
+				data, err := buildEventTampering(ctx, msg.Id, 1, a.pidGps, a.puertas, msg.Raw)
 				if err != nil {
 					logs.LogWarn.Println(err)
 					break
@@ -358,7 +381,18 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 			logs.LogWarn.Println("ANOMALY")
 			diff := msg.GetValue() - a.rawAnomalies[id]
 			if diff > 0 && diff <= 5 {
-				data, err := buildEventAnomalies(ctx, msg.Id, diff, a.pidGps, a.puertas)
+				a.anomalies[id] += diff
+				data, err := buildEventAnomalies(ctx, msg.Id, diff, a.pidGps, a.puertas, msg.Raw)
+				if err != nil {
+					logs.LogWarn.Println(err)
+					break
+				}
+				if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
+					pubsub.Publish(topicEvents, data)
+				}
+			} else if diff != 0 {
+				a.anomalies[id] += 1
+				data, err := buildEventAnomalies(ctx, msg.Id, 1, a.pidGps, a.puertas, msg.Raw)
 				if err != nil {
 					logs.LogWarn.Println(err)
 					break

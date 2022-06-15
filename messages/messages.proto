@@ -22,7 +22,8 @@ message Event {
 		TAMPERING = 3;
 		ANOMALY = 4;
 	}
-	EventType type = 3;	
+	EventType type = 3;
+	bytes raw = 4;
 }
 
 message Snapshot {
@@ -31,7 +32,9 @@ message Snapshot {
 	map<int32,int64> RawInputs = 3;
 	map<int32,int64> RawOutputs = 4;
 	map<int32,int64> RawAnomalies = 5; 
-	map<int32,int64> RawTampering = 6; 
+	map<int32,int64> RawTampering = 6;
+	map<int32,int64> Anomalies = 7; 
+	map<int32,int64> Tampering = 8;
 }
 
 message CountingActor {

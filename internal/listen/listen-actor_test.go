@@ -23,9 +23,10 @@ func TestNewListen(t *testing.T) {
 		{
 			name: "test1",
 			args: args{
-				devPort:    "/dev/ttyUSB0",
-				devBaud:    9600,
-				devTimeout: 30 * time.Second,
+				devPort:     "/dev/pts/2",
+				devBaud:     19200,
+				devTimeout:  30 * time.Second,
+				typeCounter: 1,
 			},
 		},
 	}

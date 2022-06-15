@@ -1,4 +1,5 @@
-//+build optocontrol
+//go:build optocontrol
+// +build optocontrol
 
 package listen
 
@@ -98,6 +99,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					}
 					break
 				}
+				countErr = 0
 				fmt.Printf("%s: result readbytes (1): %+v\n",
 					time.Now().Format("02-01-2006 15:04:05.000"), result)
 

@@ -1,8 +1,12 @@
-//+build beane !ingnovus
-//+build beane !bea
-//+build beane !sonar
-//+build beane !optocontrol
-//+build beane !extreme
+//go:build (beane || !ingnovus) && (beane || !bea) && (beane || !sonar) && (beane || !optocontrol) && (beane || !extreme) && (beane || !st300) && (beane || !logirastreo) && (beane || !st3310)
+// +build beane !ingnovus
+// +build beane !bea
+// +build beane !sonar
+// +build beane !optocontrol
+// +build beane !extreme
+// +build beane !st300
+// +build beane !logirastreo
+// +build beane !st3310
 
 package listen
 
@@ -33,7 +37,7 @@ func init() {
 
 func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
-	timeout := time.Duration(timeout_samples) * time.Millisecond
+	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
 	var devv levis.Device
 
@@ -42,6 +46,8 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 	} else {
 		devv = v
 	}
+
+	timeout := devv.ReadTimeout()
 
 	inputsFront := uint32(0)
 	inputsBack := uint32(0)
@@ -59,10 +65,25 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
 		defer ctx.Send(self, &MsgListenError{})
+		var tamperingTimerBack = time.NewTimer(100 * time.Millisecond)
+		if !tamperingTimerBack.Stop() {
+			select {
+			case <-tamperingTimerBack.C:
+			case <-time.After(100 * time.Millisecond):
+			}
+		}
+		var tamperingTimerFront = time.NewTimer(100 * time.Millisecond)
+		if !tamperingTimerFront.Stop() {
+			select {
+			case <-tamperingTimerFront.C:
+			case <-time.After(100 * time.Millisecond):
+			}
+		}
+		const tamperingTimeout = 6 * time.Second
 		var ch1 <-chan time.Time
 		var ch2 <-chan time.Time
 		if typeCounter == 0 || typeCounter == 1 {
-			tick1 := time.NewTicker(timeout)
+			tick1 := time.NewTicker(timeoutsamples)
 			defer tick1.Stop()
 			ch1 = tick1.C
 		} else {
@@ -105,6 +126,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					}
 					break
 				}
+				countErr = 0
 				fmt.Printf("%s: result readbytes (1): [% X], len: %d\n",
 					time.Now().Format("02-01-2006 15:04:05.000"), result, len(result))
 				if len(result) < 0x0011-0x0001 {
@@ -114,7 +136,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 
 				inputs := binary.BigEndian.Uint32(result[0:4])
 				outputs := binary.BigEndian.Uint32(result[4:8])
-				anomalies := binary.LittleEndian.Uint32(result[8:12])
+				anomalies := binary.BigEndian.Uint32(result[8:12])
 				tampering := binary.BigEndian.Uint32(result[12:16])
 				alarm := result[17]
 
@@ -124,6 +146,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 						Id:    int32(id),
 						Value: int64(inputs),
 						Type:  messages.INPUT,
+						Raw:   result,
 					})
 				}
 				inputsFront = inputs
@@ -132,6 +155,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 						Id:    int32(id),
 						Value: int64(outputs),
 						Type:  messages.OUTPUT,
+						Raw:   result,
 					})
 				}
 				outputsFront = outputs
@@ -140,20 +164,42 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 						Id:    int32(id),
 						Value: int64(anomalies),
 						Type:  messages.ANOMALY,
+						Raw:   result,
 					})
 				}
 				anomaliesFront = anomalies
-				if alarm != 0x00 && (tampering > 0 && tampering != uint32(tamperingFront)) {
-					rootctx.Send(self, &messages.Event{
-						Id:    int32(id),
-						Value: int64(tampering),
-						Type:  messages.TAMPERING,
-					})
+				if alarm != 0x00 {
+					select {
+					case <-tamperingTimerFront.C:
+						tamperingTimerFront.Reset(tamperingTimeout)
+						rootctx.Send(self, &messages.Event{
+							Id:    int32(id),
+							Value: int64(tampering - 1),
+							Type:  messages.TAMPERING,
+							Raw:   result,
+						})
+					default:
+						if tampering > 0 && tampering != uint32(tamperingFront) {
+							rootctx.Send(self, &messages.Event{
+								Id:    int32(id),
+								Value: int64(tampering),
+								Type:  messages.TAMPERING,
+								Raw:   result,
+							})
+							if !tamperingTimerFront.Stop() {
+								select {
+								case <-tamperingTimerFront.C:
+								case <-time.After(100 * time.Millisecond):
+								}
+							}
+							tamperingTimerFront.Reset(tamperingTimeout)
+						}
+					}
 				}
 				tamperingFront = tampering
 
 				if alarm != 0x00 && alarmCacheFront != alarm {
-					logs.LogWarn.Printf("tampering UP: %X", alarm)
+					logs.LogWarn.Printf("tampering UP: %X, %X", alarm, tampering)
 					fmt.Printf("%s, tampering UP(1): %X\n", time.Now().Format("02-01-2006 15:04:05.000"), alarm)
 				}
 				if alarm == 0x00 && alarmCacheFront != 0x00 {
@@ -210,6 +256,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 						Id:    int32(id),
 						Value: int64(outputs),
 						Type:  messages.OUTPUT,
+						Raw:   result,
 					})
 				}
 				outputsBack = outputs
@@ -218,15 +265,37 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 						Id:    int32(id),
 						Value: int64(anomalies),
 						Type:  messages.ANOMALY,
+						Raw:   result,
 					})
 				}
 				anomaliesBack = anomalies
-				if alarm != 0x00 && (tampering > 0 && tampering != uint32(tamperingBack)) {
-					rootctx.Send(self, &messages.Event{
-						Id:    int32(id),
-						Value: int64(tampering),
-						Type:  messages.TAMPERING,
-					})
+				if alarm != 0x00 {
+					select {
+					case <-tamperingTimerBack.C:
+						tamperingTimerBack.Reset(tamperingTimeout)
+						rootctx.Send(self, &messages.Event{
+							Id:    int32(id),
+							Value: int64(tampering - 1),
+							Type:  messages.TAMPERING,
+							Raw:   result,
+						})
+					default:
+						if tampering > 0 && tampering != uint32(tamperingBack) {
+							rootctx.Send(self, &messages.Event{
+								Id:    int32(id),
+								Value: int64(tampering),
+								Type:  messages.TAMPERING,
+								Raw:   result,
+							})
+							if !tamperingTimerBack.Stop() {
+								select {
+								case <-tamperingTimerBack.C:
+								case <-time.After(100 * time.Millisecond):
+								}
+							}
+							tamperingTimerBack.Reset(tamperingTimeout)
+						}
+					}
 				}
 				tamperingBack = tampering
 
@@ -239,6 +308,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					fmt.Printf("%s, tampering UP(2): %X\n", time.Now().Format("02-01-2006 15:04:05.000"), alarm)
 				}
 				alarmCacheBack = alarm
+
 			}
 		}
 	}(rootctx, self)

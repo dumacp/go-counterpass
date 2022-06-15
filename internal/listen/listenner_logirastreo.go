@@ -1,5 +1,5 @@
-//go:build extreme
-// +build extreme
+//go:build logirastreo
+// +build logirastreo
 
 package listen
 
@@ -13,8 +13,8 @@ import (
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/messages"
+	logirastreo "github.com/dumacp/go-logirastreo/v1"
 	"github.com/dumacp/go-logs/pkg/logs"
-	"github.com/dumacp/sonar/ins50"
 )
 
 var timeout_samples int
@@ -28,12 +28,13 @@ const (
 )
 
 func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
-	var devv ins50.Device
+	var devv logirastreo.Device
 
-	if v, ok := dev.(ins50.Device); !ok {
-		return fmt.Errorf("device is not sonar_extreme device")
+	if v, ok := dev.(logirastreo.Device); !ok {
+		return fmt.Errorf("device is not logirastreo device")
 	} else {
 		devv = v
 	}
@@ -64,13 +65,13 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 		for {
 			select {
 			case <-quit:
-				logs.LogWarn.Println("device sonar_extreme is closed")
+				logs.LogWarn.Println("device logirastreo is closed")
 				return
 			case <-ch1:
 				tn := time.Now()
 				fmt.Printf("%s, request (1)\n", time.Now().Format("02-01-2006 15:04:05.000"))
 
-				result, err := devv.ReadData()
+				result, err := devv.Read()
 				if err != nil {
 					logs.LogWarn.Println(err)
 					if errors.Is(err, io.EOF) {
@@ -135,7 +136,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 				}
 				outputsBack = uint(result.Outputs2())
 
-				if result.Locks2() > 0 && uint(result.Locks2()) != tamperingBack {
+				if result.Locks2() > 0 && uint(result.Locks1()) != tamperingBack {
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Locks2()),

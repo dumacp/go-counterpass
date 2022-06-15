@@ -1,3 +1,4 @@
+//go:build ingnovus
 // +build ingnovus
 
 package device
@@ -8,8 +9,9 @@ import (
 )
 
 func NewDevice(port string, speed int) (interface{}, error) {
-	dev, err := ingnovus.NewDevice(port, speed, 600*time.Millisecond)
-	if err != nil {
+	dev := ingnovus.NewDevice(port, speed, 1000*time.Millisecond)
+
+	if err := dev.Open(); err != nil {
 		return nil, err
 	}
 

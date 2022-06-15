@@ -1,16 +1,16 @@
-//go:build extreme
-// +build extreme
+//go:build st3310
+// +build st3310
 
 package device
 
 import (
 	"time"
 
-	"github.com/dumacp/sonar/ins50"
+	"github.com/dumacp/go-ingnovus/st3310"
 )
 
 func NewDevice(port string, speed int) (Device, error) {
-	dev := ins50.NewDevice(port, speed, 1*time.Second)
+	dev := st3310.NewDevice(port, speed, 600*time.Millisecond)
 
 	if err := dev.Open(); err != nil {
 		return nil, err
