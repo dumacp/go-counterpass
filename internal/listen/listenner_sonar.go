@@ -49,7 +49,10 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 	rootctx := ctx.ActorSystem().Root
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
-		defer ctx.Send(self, &MsgListenError{})
+		defer func() {
+			id := typeCounter >> 1
+			ctx.Send(self, &MsgListenError{ID: id})
+		}()
 		for v := range ch {
 			if bytes.Contains(v, []byte("RPT")) {
 				if first {

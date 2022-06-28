@@ -108,7 +108,8 @@ func (a *ListenActor) Receive(ctx actor.Context) {
 		if err := Listen(msg.Device, a.quit, ctx, a.typeCounter, a.sendConsole); err != nil {
 			logs.LogError.Println(err)
 			time.Sleep(1 * time.Second)
-			ctx.Send(ctx.Self(), &MsgListenError{})
+			id := a.typeCounter >> 1
+			ctx.Send(ctx.Self(), &MsgListenError{ID: id})
 			break
 		}
 		logs.LogInfo.Println("listen started")

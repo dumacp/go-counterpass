@@ -1,6 +1,8 @@
 package listen
 
-type MsgListenError struct{}
+type MsgListenError struct {
+	ID int
+}
 type MsgToTest struct {
 	Data []byte
 }

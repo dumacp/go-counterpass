@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/persistence"
@@ -37,6 +38,7 @@ type CountingActor struct {
 	rawOutputs         map[int32]int64
 	rawTampering       map[int32]int64
 	rawAnomalies       map[int32]int64
+	lastEventTime      time.Time
 
 	pidGps *actor.PID
 }
@@ -98,6 +100,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 		if a.disablePersistence {
 			logs.LogInfo.Println("disable persistence")
 		}
+		a.lastEventTime = time.Now().Add(-10 * time.Minute)
 		a.inputs = make(map[int32]int64)
 		a.outputs = make(map[int32]int64)
 		a.rawInputs = make(map[int32]int64)
@@ -254,161 +257,191 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 		// 	msg.GetValue(), a.rawInputs, a.rawOutputs)
 		switch msg.GetType() {
 		case messages.INPUT:
-			id := msg.Id
-			if _, ok := a.rawInputs[id]; !ok {
-				a.rawInputs[id] = 0
-			}
-			if _, ok := a.inputs[id]; !ok {
-				a.inputs[id] = 0
-			}
+			if err := func() error {
+				id := msg.Id
+				defer func() {
+					a.rawInputs[id] = msg.GetValue()
+				}()
+				if time.Since(a.lastEventTime) < 2*time.Second {
+					return fmt.Errorf("event before 2 seconds: %s", msg)
+				}
+				a.lastEventTime = time.Now()
+				if _, ok := a.rawInputs[id]; !ok {
+					a.rawInputs[id] = 0
+				}
+				if _, ok := a.inputs[id]; !ok {
+					a.inputs[id] = 0
+				}
 
-			diff := msg.GetValue() - a.rawInputs[id]
-			if diff > 0 && a.rawInputs[id] <= 0 {
-				// a.inputs[id] = 1
-				// if !a.Recovering() {
-				// 	sendEvent(ctx, a.events, a.counterType, id, 1, messages.INPUT)
-				// 	// ctx.Send(a.events, &messages.Event{Id: id, Type: messages.INPUT, Value: 1})
-				// }
-			} else if diff > 0 && diff < 60 {
-				if v, ok := a.puertas[uint(id)]; a.disableDoorGpio || !ok || v == a.openState[id] {
-					a.inputs[id] += diff
+				diff := msg.GetValue() - a.rawInputs[id]
 
-					data, err := buildEventPass(ctx, id, msg.GetType(), diff, a.pidGps, a.puertas, msg.Raw)
+				if diff > 0 && a.rawInputs[id] <= 0 {
+					// a.inputs[id] = 1
+					// if !a.Recovering() {
+					// 	sendEvent(ctx, a.events, a.counterType, id, 1, messages.INPUT)
+					// 	// ctx.Send(a.events, &messages.Event{Id: id, Type: messages.INPUT, Value: 1})
+					// }
+				} else if diff > 0 && diff < 60 {
+					if v, ok := a.puertas[uint(id)]; a.disableDoorGpio || !ok || v == a.openState[id] {
+						a.inputs[id] += diff
+
+						data, err := buildEventPass(ctx, id, msg.GetType(), diff, a.pidGps, a.puertas, msg.Raw)
+						if err != nil {
+							return err
+						}
+						if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
+							pubsub.Publish(topicCounterEvent, data)
+						}
+						if diff > 5 {
+							logs.LogError.Printf("diff is greater than 5 -> msg.GetValue(): %d, a.rawInputs[id]:: %d", msg.GetValue(), a.rawInputs[id])
+						}
+					}
+				} else if diff > -5 && diff < 0 {
+					logs.LogWarn.Printf("diff is negative -> msg.GetValue(): %d, a.rawInputs[id]: %d", msg.GetValue(), a.rawInputs[id])
+
+					a.inputs[id] += 1
+					data, err := buildEventPass(ctx, id, msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
 					if err != nil {
-						logs.LogWarn.Println(err)
-						break
+						return err
 					}
 					if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
 						pubsub.Publish(topicCounterEvent, data)
 					}
-					if diff > 5 {
-						logs.LogError.Printf("diff is greater than 5 -> msg.GetValue(): %d, a.rawInputs[id]:: %d", msg.GetValue(), a.rawInputs[id])
-					}
+				} else if diff != 0 {
+					logs.LogError.Printf("diff is greater than 60 or less than -5 -> msg.GetValue(): %d, a.rawInputs[id]:: %d", msg.GetValue(), a.rawInputs[id])
 				}
-			} else if diff > -5 && diff < 0 {
-				logs.LogWarn.Printf("diff is negative -> msg.GetValue(): %d, a.rawInputs[id]: %d", msg.GetValue(), a.rawInputs[id])
+				return nil
 
-				a.inputs[id] += 1
-				data, err := buildEventPass(ctx, id, msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
-				if err != nil {
-					logs.LogWarn.Println(err)
-					break
-				}
-				if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
-					pubsub.Publish(topicCounterEvent, data)
-				}
-			} else if diff != 0 {
-				logs.LogError.Printf("diff is greater than 60 or less than -5 -> msg.GetValue(): %d, a.rawInputs[id]:: %d", msg.GetValue(), a.rawInputs[id])
+			}(); err != nil {
+				logs.LogWarn.Println(err)
 			}
 
-			a.rawInputs[id] = msg.GetValue()
 		case messages.OUTPUT:
-			id := msg.Id
-			if _, ok := a.rawOutputs[id]; !ok {
-				a.rawOutputs[id] = 0
-			}
-			if _, ok := a.outputs[id]; !ok {
-				a.outputs[id] = 0
-			}
-			diff := msg.GetValue() - a.rawOutputs[id]
-			if diff > 0 && a.rawOutputs[id] <= 0 {
-				// a.outputs[id] = 1
-				// if !a.Recovering() {
-				// 	sendEvent(ctx, a.events, a.counterType, id, 1, messages.OUTPUT)
-				// 	// ctx.Send(a.events, &messages.Event{Id: id, Type: messages.OUTPUT, Value: 1})
-				// }
-			} else if diff > 0 && diff < 60 {
-				if v, ok := a.puertas[uint(id)]; a.disableDoorGpio || !ok || v == a.openState[id] {
-					a.outputs[id] += diff
-					data, err := buildEventPass(ctx, id, msg.GetType(), diff, a.pidGps, a.puertas, msg.Raw)
-					if err != nil {
-						logs.LogWarn.Println(err)
-						break
-					}
+			if err := func() error {
+				id := msg.Id
+				defer func() {
+					a.rawOutputs[id] = msg.GetValue()
+				}()
+				if time.Since(a.lastEventTime) < 2*time.Second {
+					return fmt.Errorf("event before 2 seconds: %s", msg)
+				}
+				a.lastEventTime = time.Now()
+				if _, ok := a.rawOutputs[id]; !ok {
+					a.rawOutputs[id] = 0
+				}
+				if _, ok := a.outputs[id]; !ok {
+					a.outputs[id] = 0
+				}
+				diff := msg.GetValue() - a.rawOutputs[id]
+				if diff > 0 && a.rawOutputs[id] <= 0 {
+					// a.outputs[id] = 1
+					// if !a.Recovering() {
+					// 	sendEvent(ctx, a.events, a.counterType, id, 1, messages.OUTPUT)
+					// 	// ctx.Send(a.events, &messages.Event{Id: id, Type: messages.OUTPUT, Value: 1})
+					// }
+				} else if diff > 0 && diff < 60 {
+					if v, ok := a.puertas[uint(id)]; a.disableDoorGpio || !ok || v == a.openState[id] {
+						a.outputs[id] += diff
+						data, err := buildEventPass(ctx, id, msg.GetType(), diff, a.pidGps, a.puertas, msg.Raw)
+						if err != nil {
+							return err
+						}
 
+						if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
+							pubsub.Publish(topicCounterEvent, data)
+						}
+						if diff > 5 {
+							logs.LogWarn.Printf("diff is greater than 5 -> msg.GetValue(): %d, a.rawOutputs[id]: %d", msg.GetValue(), a.rawOutputs[id])
+						}
+					}
+				} else if diff > -5 && diff < 0 {
+					// a.outputs[id] += msg.GetValue()
+					logs.LogWarn.Printf("diff is negative -> msg.GetValue(): %d, a.rawOutputs[id]: %d", msg.GetValue(), a.rawOutputs[id])
+
+					a.outputs[id] += 1
+					data, err := buildEventPass(ctx, id, msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
+					if err != nil {
+						return err
+					}
 					if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
 						pubsub.Publish(topicCounterEvent, data)
 					}
-					if diff > 5 {
-						logs.LogWarn.Printf("diff is greater than 5 -> msg.GetValue(): %d, a.rawOutputs[id]: %d", msg.GetValue(), a.rawOutputs[id])
+				} else if diff != 0 {
+					logs.LogError.Printf("diff is greater than 60 or less than -5 -> msg.GetValue(): %d, a.rawOutputs[id]: %d", msg.GetValue(), a.rawOutputs[id])
+				}
+				return nil
+			}(); err != nil {
+				logs.LogWarn.Println(err)
+			}
+		case messages.TAMPERING:
+			if err := func() error {
+				id := msg.Id
+				defer func() {
+					a.rawTampering[id] = msg.GetValue()
+				}()
+				logs.LogWarn.Println("shelteralarm")
+				diff := msg.GetValue() - a.rawTampering[id]
+				if diff > 0 && diff < 60 {
+					a.tampering[id] += diff
+					data, err := buildEventTampering(ctx, msg.Id, diff, a.pidGps, a.puertas, msg.Raw)
+					if err != nil {
+						return err
+					}
+					if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
+						pubsub.Publish(topicEvents, data)
+					}
+				} else if diff != 0 {
+					a.tampering[id] += 1
+					data, err := buildEventTampering(ctx, msg.Id, 1, a.pidGps, a.puertas, msg.Raw)
+					if err != nil {
+						return err
+					}
+					if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
+						pubsub.Publish(topicEvents, data)
 					}
 				}
-			} else if diff > -5 && diff < 0 {
-				// a.outputs[id] += msg.GetValue()
-				logs.LogWarn.Printf("diff is negative -> msg.GetValue(): %d, a.rawOutputs[id]: %d", msg.GetValue(), a.rawOutputs[id])
-
-				a.outputs[id] += 1
-				data, err := buildEventPass(ctx, id, msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
-				if err != nil {
-					logs.LogWarn.Println(err)
-					break
-				}
-				if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
-					pubsub.Publish(topicCounterEvent, data)
-				}
-			} else if diff != 0 {
-				logs.LogError.Printf("diff is greater than 60 or less than -5 -> msg.GetValue(): %d, a.rawOutputs[id]: %d", msg.GetValue(), a.rawOutputs[id])
+				return nil
+			}(); err != nil {
+				logs.LogWarn.Println(err)
 			}
-			a.rawOutputs[id] = msg.GetValue()
-		case messages.TAMPERING:
-			id := msg.Id
-			logs.LogWarn.Println("shelteralarm")
-			diff := msg.GetValue() - a.rawTampering[id]
-			if diff > 0 && diff < 60 {
-				a.tampering[id] += diff
-				data, err := buildEventTampering(ctx, msg.Id, diff, a.pidGps, a.puertas, msg.Raw)
-				if err != nil {
-					logs.LogWarn.Println(err)
-					break
-				}
-				if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
-					pubsub.Publish(topicEvents, data)
-				}
-			} else if diff != 0 {
-				a.tampering[id] += 1
-				data, err := buildEventTampering(ctx, msg.Id, 1, a.pidGps, a.puertas, msg.Raw)
-				if err != nil {
-					logs.LogWarn.Println(err)
-					break
-				}
-				if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
-					pubsub.Publish(topicEvents, data)
-				}
-			}
-			a.rawTampering[id] = msg.GetValue()
 		case messages.ANOMALY:
-			id := msg.Id
-			logs.LogWarn.Println("ANOMALY")
-			diff := msg.GetValue() - a.rawAnomalies[id]
-			if diff > 0 && diff <= 5 {
-				a.anomalies[id] += diff
-				data, err := buildEventAnomalies(ctx, msg.Id, diff, a.pidGps, a.puertas, msg.Raw)
-				if err != nil {
-					logs.LogWarn.Println(err)
-					break
+			if err := func() error {
+				id := msg.Id
+				defer func() {
+					a.rawAnomalies[id] = msg.GetValue()
+				}()
+				logs.LogWarn.Println("ANOMALY")
+				diff := msg.GetValue() - a.rawAnomalies[id]
+				if diff > 0 && diff <= 5 {
+					a.anomalies[id] += diff
+					data, err := buildEventAnomalies(ctx, msg.Id, diff, a.pidGps, a.puertas, msg.Raw)
+					if err != nil {
+						return err
+					}
+					if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
+						pubsub.Publish(topicEvents, data)
+					}
+				} else if diff != 0 {
+					a.anomalies[id] += 1
+					data, err := buildEventAnomalies(ctx, msg.Id, 1, a.pidGps, a.puertas, msg.Raw)
+					if err != nil {
+						return err
+					}
+					if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
+						pubsub.Publish(topicEvents, data)
+					}
 				}
-				if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
-					pubsub.Publish(topicEvents, data)
-				}
-			} else if diff != 0 {
-				a.anomalies[id] += 1
-				data, err := buildEventAnomalies(ctx, msg.Id, 1, a.pidGps, a.puertas, msg.Raw)
-				if err != nil {
-					logs.LogWarn.Println(err)
-					break
-				}
-				if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
-					pubsub.Publish(topicEvents, data)
-				}
+				return nil
+			}(); err != nil {
+				logs.LogWarn.Println(err)
 			}
-			a.rawAnomalies[id] = msg.GetValue()
 		}
 
 	// case *MsgLogResponse:
 	// 	logs.LogWarn.Printf("log frame counters -> %s", msg.Value)
 	case *listen.MsgListenError:
 		logs.LogWarn.Printf("counter keep alive error")
-		data, err := buildListenError()
+		data, err := buildListenError(ctx, int32(msg.ID), 1, a.pidGps, a.puertas, nil)
 		if err != nil {
 			logs.LogWarn.Println(err)
 			break
