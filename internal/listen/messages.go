@@ -3,6 +3,9 @@ package listen
 type MsgListenError struct {
 	ID int
 }
+type MsgListenStarted struct {
+	TypeCounter int
+}
 type MsgToTest struct {
 	Data []byte
 }

@@ -103,8 +103,13 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					break
 				}
 				countErr = 0
-				fmt.Printf("%s: result readbytes (1): %+v\n",
-					time.Now().Format("02-01-2006 15:04:05.000"), result)
+				fmt.Printf("%s: result readbytes (id=%d): %+v\n",
+					time.Now().Format("02-01-2006 15:04:05.000"), id, result)
+
+				if firstFrameCh1 {
+					logs.LogInfo.Printf("first readbytes (id=%d): [%s]\n", id, result.RawResponse())
+					firstFrameCh1 = false
+				}
 
 				inputs := result.AdultUp
 				outputs := result.AdultDown
@@ -139,7 +144,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 
 			case <-ch2:
 				tn := time.Now()
-				fmt.Printf("%s, request (2)\n", time.Now().Format("02-01-2006 15:04:05.000"))
+				fmt.Printf("%s, request (id=1)\n", time.Now().Format("02-01-2006 15:04:05.000"))
 				id := 1
 				result, err := devv.ReadData(optocontrol.DOOR_2)
 				if err != nil {
@@ -157,8 +162,13 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					}
 					break
 				}
-				fmt.Printf("%s: result readbytes (2): %+v\n",
-					time.Now().Format("02-01-2006 15:04:05.000"), result)
+				fmt.Printf("%s: result readbytes (id=%d): %+v\n",
+					time.Now().Format("02-01-2006 15:04:05.000"), id, result)
+
+				if firstFrameCh1 {
+					logs.LogInfo.Printf("first readbytes (id=%d): [%s]\n", id, result.RawResponse())
+					firstFrameCh1 = false
+				}
 
 				inputs := result.AdultUp
 				outputs := result.AdultDown

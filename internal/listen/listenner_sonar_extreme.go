@@ -59,6 +59,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 			id := typeCounter >> 1
 			ctx.Send(self, &MsgListenError{ID: id})
 		}()
+		firstFrameCh1 := true
 		countErr := 0
 		tick1 := time.NewTicker(timeoutsamples)
 		defer tick1.Stop()
@@ -71,7 +72,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 				return
 			case <-ch1:
 				tn := time.Now()
-				fmt.Printf("%s, request (1)\n", time.Now().Format("02-01-2006 15:04:05.000"))
+				fmt.Printf("%s, request\n", time.Now().Format("02-01-2006 15:04:05.000"))
 
 				result, err := devv.ReadData()
 				if err != nil {
@@ -90,9 +91,12 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					break
 				}
 				countErr = 0
-				fmt.Printf("%s: result readbytes (1): %+v\n",
+				fmt.Printf("%s: result readbytes: %+v\n",
 					time.Now().Format("02-01-2006 15:04:05.000"), result)
-
+				if firstFrameCh1 {
+					logs.LogInfo.Printf("first readbytes: [%s]\n", result.RawResponse())
+					firstFrameCh1 = false
+				}
 				// fmt.Printf("inputs (1): %d\n", inputs)
 				id := 0
 				if result.Inputs1() > 0 && uint(result.Inputs1()) != inputsFront {

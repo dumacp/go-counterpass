@@ -8,7 +8,7 @@
 // +build beane !logirastreo
 // +build beane !st3310
 
-package listen
+package beane
 
 import (
 	"encoding/binary"
@@ -82,6 +82,8 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 			case <-time.After(100 * time.Millisecond):
 			}
 		}
+		firstFrameCh1 := true
+		firstFrameCh2 := true
 		const tamperingTimeout = 6 * time.Second
 		var ch1 <-chan time.Time
 		var ch2 <-chan time.Time
@@ -110,12 +112,12 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 				return
 			case <-ch1:
 				tn := time.Now()
-				fmt.Printf("%s, request (1)\n", time.Now().Format("02-01-2006 15:04:05.000"))
+				fmt.Printf("%s, request (slaveID=1)\n", time.Now().Format("02-01-2006 15:04:05.000"))
 				id := 0
 				devv.SetSlaveID(1)
 				result, err := devv.ReadBytesRegister(0x0001, 22/2)
 				if err != nil {
-					logs.LogWarn.Println(err)
+					logs.LogWarn.Printf("slaveID=1 error: %s", err)
 					if errors.Is(err, io.EOF) {
 						if time.Since(tn) < timeout/10 {
 							countErr++
@@ -130,11 +132,16 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					break
 				}
 				countErr = 0
-				fmt.Printf("%s: result readbytes (1): [% X], len: %d\n",
+				fmt.Printf("%s: result readbytes (slaveId=1): [% X], len: %d\n",
 					time.Now().Format("02-01-2006 15:04:05.000"), result, len(result))
+
 				if len(result) < 0x0011-0x0001 {
-					logs.LogWarn.Println("the result is incomplete")
+					logs.LogWarn.Printf("the result (slaveId=1) is incomplete, [% X]", result)
 					break
+				}
+				if firstFrameCh1 {
+					logs.LogInfo.Printf("first readbytes (id=0): [% X], len: %d\n", result, len(result))
+					firstFrameCh1 = false
 				}
 
 				inputs := binary.BigEndian.Uint32(result[0:4])
@@ -202,23 +209,23 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 				tamperingFront = tampering
 
 				if alarm != 0x00 && alarmCacheFront != alarm {
-					logs.LogWarn.Printf("tampering UP: %X, %X", alarm, tampering)
-					fmt.Printf("%s, tampering UP(1): %X\n", time.Now().Format("02-01-2006 15:04:05.000"), alarm)
+					logs.LogWarn.Printf("tampering UP(id=%d): %X, %X", id, alarm, tampering)
+					fmt.Printf("%s, tampering UP(id=%d): %X\n", time.Now().Format("02-01-2006 15:04:05.000"), id, alarm)
 				}
 				if alarm == 0x00 && alarmCacheFront != 0x00 {
-					logs.LogWarn.Printf("tampering DOWN: %X", result[17])
-					fmt.Printf("%s, tampering UP(1): %X\n", time.Now().Format("02-01-2006 15:04:05.000"), alarm)
+					logs.LogWarn.Printf("tampering DOWN(id=%d): %X", id, result[17])
+					fmt.Printf("%s, tampering UP(id=%d): %X\n", time.Now().Format("02-01-2006 15:04:05.000"), id, alarm)
 				}
 				alarmCacheFront = alarm
 
 			case <-ch2:
 				tn := time.Now()
-				fmt.Printf("%s, request (2)\n", time.Now().Format("02-01-2006 15:04:05.000"))
+				fmt.Printf("%s, request (slaveId=2)\n", time.Now().Format("02-01-2006 15:04:05.000"))
 				id := 1
 				devv.SetSlaveID(2)
 				result, err := devv.ReadBytesRegister(0x0001, (22)/2)
 				if err != nil {
-					logs.LogWarn.Println(err)
+					logs.LogWarn.Printf("slaveID=2 error: %s", err)
 					if errors.Is(err, io.EOF) {
 						if time.Since(tn) < timeout/10 {
 							countErr++
@@ -232,11 +239,16 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					}
 					break
 				}
-				fmt.Printf("%s: result readbytes (2): [% X], len: %d\n",
+				fmt.Printf("%s: result readbytes (slaveId=2): [% X], len: %d\n",
 					time.Now().Format("02-01-2006 15:04:05.000"), result, len(result))
+
 				if len(result) < 0x0011-0x0001 {
-					logs.LogWarn.Println("the result is incomplete")
+					logs.LogWarn.Printf("the result (slaveId=2) is incomplete, [% X]", result)
 					break
+				}
+				if firstFrameCh2 {
+					logs.LogInfo.Printf("first readbytes (id=1): [% X], len: %d\n", result, len(result))
+					firstFrameCh2 = false
 				}
 
 				inputs := binary.BigEndian.Uint32(result[0:4])
@@ -303,12 +315,12 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 				tamperingBack = tampering
 
 				if alarm != 0x00 && alarmCacheBack != alarm {
-					logs.LogWarn.Printf("tampering UP: %X", alarm)
-					fmt.Printf("%s, tampering UP(2): %X\n", time.Now().Format("02-01-2006 15:04:05.000"), alarm)
+					logs.LogWarn.Printf("tampering UP(id=%d): %X, %X", id, alarm, tampering)
+					fmt.Printf("%s, tampering UP(id=%d): %X\n", time.Now().Format("02-01-2006 15:04:05.000"), id, alarm)
 				}
 				if alarm == 0x00 && alarmCacheBack != 0x00 {
-					logs.LogWarn.Printf("tampering DOWN: %X", result[17])
-					fmt.Printf("%s, tampering UP(2): %X\n", time.Now().Format("02-01-2006 15:04:05.000"), alarm)
+					logs.LogWarn.Printf("tampering DOWN(id=%d): %X", id, result[17])
+					fmt.Printf("%s, tampering UP(id=%d): %X\n", time.Now().Format("02-01-2006 15:04:05.000"), id, alarm)
 				}
 				alarmCacheBack = alarm
 

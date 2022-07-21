@@ -33,7 +33,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 		devv = v
 	}
 
-	first := true
+	firstFrameCh1 := true
 
 	memm := new(mem)
 	memm.inputs = make([]int64, 2)
@@ -55,9 +55,9 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 		}()
 		for v := range ch {
 			if bytes.Contains(v, []byte("RPT")) {
-				if first {
-					first = false
-					logs.LogInfo.Printf("actual door register: %s\n", v)
+				if firstFrameCh1 {
+					logs.LogInfo.Printf("first readbytes: [%s]\n", v)
+					firstFrameCh1 = false
 				}
 				queue.PushBack(v)
 				if queue.Len() > 5 {

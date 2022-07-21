@@ -13,36 +13,20 @@ import (
 
 //ListenActor actor to listen events
 type ListenActor struct {
-	// *logs.Logger
 	context     actor.Context
 	device      interface{}
 	test        bool
 	typeCounter int
+	quit        chan int
 
-	quit chan int
-
-	// socket   string
-	// baudRate int
-	// timeFailure int
-	// counterType int
 	sendConsole bool
-	// countersMem []int64
-	// queue       *list.List
-	evts *eventstream.EventStream
+	evts        *eventstream.EventStream
 }
 
 //NewListen create listen actor
 func NewListen(typeCounter int) actor.Actor {
 	act := &ListenActor{}
 	act.typeCounter = typeCounter
-	// act.countingActor = countingActor
-	// act.socket = socket
-	// act.baudRate = baudRate
-	// act.logs.Logger = &logs.Logger{}
-	// act.quit = make(chan int, 0)
-	// act.timeFailure = 3
-	// act.countersMem = make([]int64, 0)
-	// act.queue = list.New()
 	act.evts = eventstream.NewEventStream()
 	return act
 }
@@ -60,7 +44,8 @@ func subscribe(ctx actor.Context, evs *eventstream.EventStream) {
 	}
 	evs.SubscribeWithPredicate(fn, func(evt interface{}) bool {
 		switch evt.(type) {
-		case *MsgListenError, *messages.Event, *device.CloseDevice, *device.StartDevice, *device.StopDevice:
+		case *MsgListenError, *MsgListenStarted,
+			*messages.Event, *device.CloseDevice, *device.StartDevice, *device.StopDevice:
 			return true
 		}
 		return false
@@ -112,7 +97,7 @@ func (a *ListenActor) Receive(ctx actor.Context) {
 			ctx.Send(ctx.Self(), &MsgListenError{ID: id})
 			break
 		}
-		logs.LogInfo.Println("listen started")
+		fmt.Printf("listen(typeCounter=%d) started\n", a.typeCounter)
 		a.device = msg.Device
 	case *MsgListenError:
 		if a.evts != nil {
@@ -120,9 +105,10 @@ func (a *ListenActor) Receive(ctx actor.Context) {
 			a.evts.Publish(&device.StopDevice{})
 			a.evts.Publish(&device.StartDevice{})
 		}
+		// a.isConnected = false
 		// ctx.Send(ctx.Parent(), &msgPingError{})
 		// time.Sleep(3 * time.Second)
-		logs.LogError.Println("listen error")
+		fmt.Printf("listen(id=%d) error\n", msg.ID)
 	case *MsgToTest:
 		logs.LogBuild.Printf("test frame: %s", msg.Data)
 	case *MsgLogRequest:

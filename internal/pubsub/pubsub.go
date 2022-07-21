@@ -1,6 +1,8 @@
 package pubsub
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"sync"
 	"time"
@@ -11,8 +13,8 @@ import (
 )
 
 const (
-	clientID       = "fare"
-	TopicAppliance = "appliance/fare"
+	clientID       = "counter"
+	TopicAppliance = "appliance/counter"
 	//TopicEvents           = TopicAppliance + "/events"
 	TopicStart            = TopicAppliance + "/START"
 	TopicRestart          = TopicAppliance + "/RESTART"
@@ -55,7 +57,9 @@ func getInstance(ctx *actor.RootContext) *pubsubActor {
 		if err != nil {
 			logs.LogError.Panic(err)
 		}
+		time.Sleep(100 * time.Millisecond)
 	})
+
 	return instance
 }
 
@@ -165,7 +169,9 @@ func (ps *pubsubActor) Receive(ctx actor.Context) {
 func client() mqtt.Client {
 	opt := mqtt.NewClientOptions().AddBroker("tcp://127.0.0.1:1883")
 	opt.SetAutoReconnect(true)
-	opt.SetClientID(fmt.Sprintf("%s-%d", clientID, time.Now().Unix()))
+	randBytes := make([]byte, 4)
+	rand.Read(randBytes)
+	opt.SetClientID(fmt.Sprintf("%s-%s-%d", clientID, hex.EncodeToString(randBytes), time.Now().Unix()))
 	opt.SetKeepAlive(30 * time.Second)
 	opt.SetConnectRetryInterval(10 * time.Second)
 	client := mqtt.NewClient(opt)
