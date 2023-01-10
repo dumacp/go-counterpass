@@ -1,11 +1,7 @@
-//go:build ingnovus
-// +build ingnovus
-
 package listen
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -14,7 +10,7 @@ import (
 	"github.com/dumacp/go-logs/pkg/logs"
 )
 
-func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenIngnovus(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	var devv ingnovus.Device
 
@@ -33,10 +29,6 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 	rootctx := ctx.ActorSystem().Root
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
-		defer func() {
-			id := typeCounter >> 1
-			ctx.Send(self, &MsgListenError{ID: id})
-		}()
 
 		ch1 := devv.ListennEvents()
 
@@ -44,8 +36,15 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 			select {
 			case <-quit:
 				logs.LogWarn.Println("device levis is closed")
+				ctx.Send(self, &MsgListenError{ID: 0})
+				ctx.Send(self, &MsgListenError{ID: 1})
 				return
-			case v := <-ch1:
+			case v, ok := <-ch1:
+				if !ok {
+					ctx.Send(self, &MsgListenError{ID: 0})
+					ctx.Send(self, &MsgListenError{ID: 1})
+					return
+				}
 
 				switch v.Type() {
 				case ingnovus.CountingEvent:

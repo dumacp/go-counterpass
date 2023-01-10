@@ -60,16 +60,17 @@ func (a *Actor) Fsm() {
 				disp.Close()
 			}
 
-			for range []int{0, 1, 2} {
+			for _, t := range []int{0, 3, 3, 10, 10, 10, 10, 10} {
+				if t > 0 {
+					time.Sleep(time.Duration(t) * time.Second)
+				}
 				disp, err = NewDevice(a.portSerial, a.speedBaud)
 				if err == nil {
-					fmt.Printf("open serial error = %s\n", err)
 					break
 				}
 				if disp != nil {
 					disp.Close()
 				}
-				time.Sleep(3 * time.Second)
 			}
 			if err != nil {
 				e.Cancel(err)
@@ -82,10 +83,7 @@ func (a *Actor) Fsm() {
 			if disp == nil {
 				return
 			}
-			dev, ok := disp.(Device)
-			if ok {
-				dev.Close()
-			}
+			disp.Close()
 		},
 	}
 

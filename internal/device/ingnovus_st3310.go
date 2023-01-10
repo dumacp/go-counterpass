@@ -1,6 +1,3 @@
-//go:build st3310
-// +build st3310
-
 package device
 
 import (
@@ -9,7 +6,7 @@ import (
 	"github.com/dumacp/go-ingnovus/st3310"
 )
 
-func NewDevice(port string, speed int) (Device, error) {
+func NewDeviceSt3310(port string, speed int) (Device, error) {
 	dev := st3310.NewDevice(port, speed, 600*time.Millisecond)
 
 	if err := dev.Open(); err != nil {

@@ -32,11 +32,9 @@ require (
 	github.com/dumacp/gpsnmea v0.0.0-00010101000000-000000000000
 	github.com/dumacp/pubsub v0.0.0-20200115200904-f16f29d84ee0
 	github.com/dumacp/sonar v0.0.0-00010101000000-000000000000
-	github.com/dumacp/turnstilene v0.0.0-20220118160154-be26dbc3b0cc
 	github.com/eclipse/paho.mqtt.golang v1.3.5
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.2
 	github.com/looplab/fsm v0.3.0
-	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2 // indirect
 )

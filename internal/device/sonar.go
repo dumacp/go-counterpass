@@ -1,6 +1,3 @@
-//go:build sonar
-// +build sonar
-
 package device
 
 import (
@@ -9,7 +6,7 @@ import (
 	"github.com/dumacp/sonar/contador"
 )
 
-func NewDevice(port string, speed int) (Device, error) {
+func NewDeviceSonar(port string, speed int) (Device, error) {
 	dev, err := contador.NewDevice(port, speed, 3*time.Second)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,3 @@
-//go:build sonar
-// +build sonar
-
 package listen
 
 import (
@@ -23,7 +20,7 @@ type mem struct {
 	locks   []int64
 }
 
-func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenSonar(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	var devv *contador.Device
 
@@ -50,8 +47,8 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
 		defer func() {
-			id := typeCounter >> 1
-			ctx.Send(self, &MsgListenError{ID: id})
+			ctx.Send(self, &MsgListenError{ID: 0})
+			ctx.Send(self, &MsgListenError{ID: 1})
 		}()
 		for v := range ch {
 			if bytes.Contains(v, []byte("RPT")) {

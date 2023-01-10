@@ -1,14 +1,9 @@
-//go:build optocontrol
-// +build optocontrol
-
 package listen
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"io"
-	"log"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -17,17 +12,7 @@ import (
 	"github.com/dumacp/go-optocontrol"
 )
 
-var timeout_samples int
-
-func init() {
-	flag.IntVar(&timeout_samples, "timeout", 900, "timeout samples in millis")
-}
-
-const (
-	max_error = 3
-)
-
-func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenOptocontrol(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
 	timeout := time.Duration(timeout_samples) * time.Millisecond
 
 	var devv optocontrol.Device
@@ -44,19 +29,12 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 	outputsBack := uint(0)
 	tamperingFront := uint(0)
 	tamperingBack := uint(0)
-	// anomaliesFront := uint(0)
-	// anomaliesBack := uint(0)
-	// alarmCacheFront := byte(0x00)
-	// alarmCacheBack := byte(0x00)
 
 	self := ctx.Self()
 	rootctx := ctx.ActorSystem().Root
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
-		defer func() {
-			id := typeCounter >> 1
-			ctx.Send(self, &MsgListenError{ID: id})
-		}()
+		firstFrameCh1 := true
 		countErr := 0
 		var ch1 <-chan time.Time
 		var ch2 <-chan time.Time
@@ -81,6 +59,8 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 			select {
 			case <-quit:
 				logs.LogWarn.Println("device optocontrol is closed")
+				ctx.Send(self, &MsgListenError{ID: 0})
+				ctx.Send(self, &MsgListenError{ID: 1})
 				return
 			case <-ch1:
 				tn := time.Now()
@@ -88,7 +68,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 				id := 0
 				result, err := devv.ReadData(optocontrol.DOOR_1)
 				if err != nil {
-					logs.LogWarn.Println(err)
+					// logs.LogWarn.Println(err)
 					if errors.Is(err, io.EOF) {
 						if time.Since(tn) < timeout/10 {
 							countErr++
@@ -96,8 +76,9 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					} else {
 						countErr++
 					}
-					log.Println(err)
+					fmt.Println(err)
 					if countErr > max_error {
+						ctx.Send(self, &MsgListenError{ID: id})
 						return
 					}
 					break
@@ -148,7 +129,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 				id := 1
 				result, err := devv.ReadData(optocontrol.DOOR_2)
 				if err != nil {
-					logs.LogWarn.Println(err)
+					// logs.LogWarn.Println(err)
 					if errors.Is(err, io.EOF) {
 						if time.Since(tn) < timeout/10 {
 							countErr++
@@ -156,8 +137,9 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					} else {
 						countErr++
 					}
-					log.Println(err)
+					fmt.Println(err)
 					if countErr > max_error {
+						ctx.Send(self, &MsgListenError{ID: id})
 						return
 					}
 					break

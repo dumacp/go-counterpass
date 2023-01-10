@@ -1,14 +1,12 @@
-//go:build ingnovus
-// +build ingnovus
-
 package device
 
 import (
-	"github.com/dumacp/go-ingnovus"
 	"time"
+
+	"github.com/dumacp/go-ingnovus"
 )
 
-func NewDevice(port string, speed int) (interface{}, error) {
+func NewDeviceIngnovus(port string, speed int) (Device, error) {
 	dev := ingnovus.NewDevice(port, speed, 1000*time.Millisecond)
 
 	if err := dev.Open(); err != nil {

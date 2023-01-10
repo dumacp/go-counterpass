@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	showVersion = "2.0.16"
+	showVersion = "2.1.3"
 )
 
 var debug bool
@@ -39,11 +39,10 @@ var version bool
 var isZeroOpenStateDoor0 bool
 var isZeroOpenStateDoor1 bool
 var disableDoorGpioListen bool
-var typeCounterDoor int
+var typeCounterDoor int = -1
 var sendGpsToConsole bool
 var simulate bool
 var mqtt bool
-var vendor bool
 var disablePersistence bool
 var initCounters string
 
@@ -53,17 +52,17 @@ func init() {
 	flag.BoolVar(&disablePersistence, "disablePersistence", false, "disable persistence")
 	flag.BoolVar(&logStd, "logStd", false, "log in stderr")
 	flag.StringVar(&pathdb, "pathdb", "/SD/boltdbs/countingdb", "socket to listen events")
-	flag.StringVar(&socket, "port", "/dev/ttyS2", "serial port")
+	flag.StringVar(&socket, "port", "", "serial port (default \"/dev/ttyS2\")")
 	flag.StringVar(&initCounters, "initCounters", "", `init counters in database, example: "101 11 202 22"
 	101 -> inputs front door,
 	11  -> outputs front door,
 	202 -> inputs back door,
 	22  -> outputs back door`)
-	flag.IntVar(&baudRate, "baud", 19200, "baudrate")
+	flag.IntVar(&baudRate, "baud", 0, fmt.Sprintf("baudrate (default %d)", baud_defaut))
 	flag.IntVar(&typeCounterDoor, "typeCounterDoor", 0, "0: two counters (front and back), 1: front counter, 2: back counter")
 	// flag.IntVar(&loglevel, "loglevel", 0, "level log")
 	flag.BoolVar(&version, "version", false, "show version")
-	flag.BoolVar(&vendor, "vendor", false, "show supported vendor")
+	// flag.BoolVar(&vendor, "vendor", false, "show supported vendor")
 	flag.BoolVar(&isZeroOpenStateDoor0, "zeroOpenStateDoor0", false, "Is Zero the open state in front door?")
 	flag.BoolVar(&isZeroOpenStateDoor0, "zeroOpenStateDoor1", false, "Is Zero the open state in back door?")
 	flag.BoolVar(&disableDoorGpioListen, "disableDoorGpioListen", false, "disable DoorGpio Listen")
@@ -74,25 +73,26 @@ func init() {
 func main() {
 
 	flag.Parse()
+	// if vendor {
+	// 	fmt.Printf("vendor: %s\n", app.VendorCounter)
+	// 	os.Exit(2)
+	// }
 
-	if typeCounterDoor < 0 || typeCounterDoor > 2 {
-		log.Fatalln("wrong typeCounterDoor")
-	}
+	getENV()
 
 	if version {
 		fmt.Printf("version: %s\n", showVersion)
 		os.Exit(2)
 	}
 
-	if vendor {
-		fmt.Printf("vendor: %s\n", app.VendorCounter)
-		os.Exit(2)
+	if typeCounterDoor < 0 || typeCounterDoor > 2 {
+		log.Fatalln("wrong typeCounterDoor")
 	}
 
 	initLogs(debug, logStd)
 
-	var provider *provider
 	var err error
+	var provider *provider
 	if !disablePersistence {
 		provider, err = newProvider(pathdb, 10)
 		if err != nil {
@@ -113,7 +113,7 @@ func main() {
 
 	var pidDoors *actor.PID
 	if !disableDoorGpioListen {
-		actorDoors := doors.New()
+		actorDoors := doors.NewActor()
 		propsDoors := actor.PropsFromProducer(func() actor.Actor { return actorDoors })
 		pidDoors, err = rootContext.SpawnNamed(propsDoors, "doors")
 		if err != nil {
@@ -135,7 +135,7 @@ func main() {
 		logs.LogError.Fatalln(err)
 	}
 
-	counting := app.NewCountingActor()
+	counting := app.NewCountingActor(device.VendorCounter)
 
 	counting.SetZeroOpenStateDoor0(isZeroOpenStateDoor0)
 	counting.SetZeroOpenStateDoor1(isZeroOpenStateDoor1)

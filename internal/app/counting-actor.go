@@ -44,11 +44,11 @@ type CountingActor struct {
 	firstEventInput1   bool
 	firstEventOutput0  bool
 	firstEventOutput1  bool
-	isListennerOK      bool
 }
 
 //NewCountingActor create CountingActor
-func NewCountingActor() *CountingActor {
+func NewCountingActor(vendor string) *CountingActor {
+	VendorCounter = vendor
 	count := &CountingActor{}
 	count.openState = make(map[int32]uint)
 	count.puertas = make(map[uint]uint)
@@ -112,7 +112,11 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 		a.tampering = make(map[int32]int64)
 		a.rawAnomalies = make(map[int32]int64)
 		a.rawTampering = make(map[int32]int64)
-		// a.initlogs.logs.Logs()
+
+		a.firstEventInput0 = true
+		a.firstEventInput1 = true
+		a.firstEventOutput0 = true
+		a.firstEventOutput1 = true
 
 		propsQueue := actor.PropsFromProducer(NewQueueActor)
 		pidQueue, err := ctx.SpawnNamed(propsQueue, "queueEventActor")
@@ -242,23 +246,6 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 			a.PersistSnapshot(snap)
 		}
 	case *messages.Event:
-		if !a.isListennerOK {
-			a.isListennerOK = true
-			logs.LogInfo.Printf("counter(typeCounter=%d) listen started", a.counterType)
-			data, err := buildListenStarted(ctx, int32(a.counterType)>>1, 0, a.pidGps)
-			if err != nil {
-				logs.LogWarn.Println(err)
-				break
-			}
-			if !a.disableSend {
-				pubsub.Publish(topicEvents, data)
-			}
-			a.firstEventInput0 = true
-			a.firstEventInput1 = true
-			a.firstEventOutput0 = true
-			a.firstEventOutput1 = true
-		}
-
 		if !a.disablePersistence && !a.Recovering() {
 			a.PersistReceive(msg)
 		}
@@ -266,19 +253,18 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 		case messages.INPUT:
 			if err := func() error {
 				id := msg.Id
-				switch id {
-				case 0:
-					if a.firstEventInput0 {
-						logs.LogInfo.Printf("new first input(%d). last value: %d, new value: %d",
-							id, a.inputs[id], msg.GetValue())
-						a.firstEventInput0 = false
+				if a.firstEventInput0 || a.firstEventInput1 {
+					logs.LogInfo.Printf("new first input(%d). last value: %d, new value: %d",
+						id, a.inputs[id], msg.GetValue())
+					data, err := buildListenStarted(ctx, id, 0, a.pidGps)
+					if err != nil {
+						return err
 					}
-				default:
-					if a.firstEventInput1 {
-						logs.LogInfo.Printf("new first input(%d). last value: %d, new value: %d",
-							id, a.inputs[id], msg.GetValue())
-						a.firstEventInput1 = false
+					if !a.disableSend {
+						pubsub.Publish(topicEvents, data)
 					}
+					a.firstEventInput0 = (!a.firstEventInput0 && true) || (a.firstEventInput0 && false)
+					a.firstEventInput1 = (!a.firstEventInput1 && true) || (a.firstEventInput1 && false)
 				}
 				defer func() {
 					a.rawInputs[id] = msg.GetValue()
@@ -296,7 +282,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 					if v, ok := a.puertas[uint(id)]; a.disableDoorGpio || !ok || v == a.openState[id] {
 						a.inputs[id] += 1
 
-						data, err := buildEventPass(ctx, id, msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
+						data, err := buildEventPass(ctx, int(id), msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
 						if err != nil {
 							return err
 						}
@@ -314,7 +300,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 					if v, ok := a.puertas[uint(id)]; a.disableDoorGpio || !ok || v == a.openState[id] {
 						a.inputs[id] += diff
 
-						data, err := buildEventPass(ctx, id, msg.GetType(), diff, a.pidGps, a.puertas, msg.Raw)
+						data, err := buildEventPass(ctx, int(id), msg.GetType(), diff, a.pidGps, a.puertas, msg.Raw)
 						if err != nil {
 							return err
 						}
@@ -334,7 +320,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 					logs.LogWarn.Printf("diff is negative -> msg.GetValue(): %d, a.rawInputs[%d]: %d", msg.GetValue(), id, a.rawInputs[id])
 
 					a.inputs[id] += 1
-					data, err := buildEventPass(ctx, id, msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
+					data, err := buildEventPass(ctx, int(id), msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
 					if err != nil {
 						return err
 					}
@@ -359,19 +345,18 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 		case messages.OUTPUT:
 			if err := func() error {
 				id := msg.Id
-				switch id {
-				case 0:
-					if a.firstEventOutput0 {
-						logs.LogInfo.Printf("new first output(%d). last value: %d, new value: %d",
-							id, a.inputs[id], msg.GetValue())
-						a.firstEventOutput0 = false
+				if a.firstEventInput0 || a.firstEventInput1 {
+					logs.LogInfo.Printf("new first input(%d). last value: %d, new value: %d",
+						id, a.inputs[id], msg.GetValue())
+					data, err := buildListenStarted(ctx, id, 0, a.pidGps)
+					if err != nil {
+						return err
 					}
-				default:
-					if a.firstEventOutput1 {
-						logs.LogInfo.Printf("new first output(%d). last value: %d, new value: %d",
-							id, a.inputs[id], msg.GetValue())
-						a.firstEventOutput1 = false
+					if !a.disableSend {
+						pubsub.Publish(topicEvents, data)
 					}
+					a.firstEventOutput0 = (!a.firstEventOutput0 && true) || (a.firstEventOutput0 && false)
+					a.firstEventOutput1 = (!a.firstEventOutput1 && true) || (a.firstEventOutput1 && false)
 				}
 				defer func() {
 					a.rawOutputs[id] = msg.GetValue()
@@ -386,7 +371,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 				if diff > 0 && a.rawOutputs[id] <= 0 {
 					if v, ok := a.puertas[uint(id)]; a.disableDoorGpio || !ok || v == a.openState[id] {
 						a.outputs[id] += 1
-						data, err := buildEventPass(ctx, id, msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
+						data, err := buildEventPass(ctx, int(id), msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
 						if err != nil {
 							return err
 						}
@@ -403,7 +388,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 				} else if diff > 0 && diff < 60 {
 					if v, ok := a.puertas[uint(id)]; a.disableDoorGpio || !ok || v == a.openState[id] {
 						a.outputs[id] += diff
-						data, err := buildEventPass(ctx, id, msg.GetType(), diff, a.pidGps, a.puertas, msg.Raw)
+						data, err := buildEventPass(ctx, int(id), msg.GetType(), diff, a.pidGps, a.puertas, msg.Raw)
 						if err != nil {
 							return err
 						}
@@ -426,7 +411,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 					logs.LogWarn.Printf("diff is negative -> msg.GetValue(): %d, a.rawOutputs[%d]: %d", msg.GetValue(), id, a.rawOutputs[id])
 
 					a.outputs[id] += 1
-					data, err := buildEventPass(ctx, id, msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
+					data, err := buildEventPass(ctx, int(id), msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
 					if err != nil {
 						return err
 					}
@@ -510,7 +495,6 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 			}
 		}
 	case *listen.MsgListenError:
-		a.isListennerOK = false
 		logs.LogWarn.Printf("counter(id=%d) listen error", msg.ID)
 		data, err := buildListenError(ctx, int32(msg.ID), 1, a.pidGps)
 		if err != nil {
@@ -522,18 +506,6 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 		}
 	case *listen.MsgListenStarted:
 		logs.LogInfo.Printf("counter(typeCounter=%d) listen started", msg.TypeCounter)
-		data, err := buildListenStarted(ctx, int32(msg.TypeCounter)>>1, 0, a.pidGps)
-		if err != nil {
-			logs.LogWarn.Println(err)
-			break
-		}
-		if !a.disableSend {
-			pubsub.Publish(topicEvents, data)
-		}
-		a.firstEventInput0 = false
-		a.firstEventInput1 = false
-		a.firstEventOutput0 = false
-		a.firstEventOutput1 = false
 	case *doors.MsgDoor:
 		a.puertas[msg.ID] = msg.Value
 	case *gps.MsgGPS:

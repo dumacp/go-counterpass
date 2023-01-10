@@ -26,13 +26,13 @@ func NewActor() actor.Actor {
 	return &Actor{}
 }
 
-func parseEvents(msg []byte) interface{} {
+func parseEvents(msg []byte) (interface{}, error) {
 
 	event := new(MsgGpsRaw)
 	event.Data = msg
 	event.Time = time.Now()
 
-	return event
+	return event, nil
 }
 
 //Receive func Receive in actor

@@ -6,14 +6,13 @@ import (
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/dumacp/go-counterpass/internal/doors"
 	"github.com/dumacp/go-counterpass/internal/gps"
 	"github.com/dumacp/go-counterpass/messages"
 	"github.com/dumacp/go-logs/pkg/logs"
 	"github.com/dumacp/pubsub"
 )
 
-func buildEventPass(ctx actor.Context, id int32,
+func buildEventPass(ctx actor.Context, id int,
 	ttype messages.Event_EventType, value int64, pidGps *actor.PID,
 	puerta map[uint]uint, raw []byte) ([]byte, error) {
 
@@ -41,17 +40,7 @@ func buildEventPass(ctx actor.Context, id int32,
 		}
 	}
 
-	doorState := uint(0)
-	switch id {
-	case 0:
-		if vm, ok := puerta[doors.GpioPuerta1]; ok {
-			doorState = vm
-		}
-	case 1:
-		if vm, ok := puerta[doors.GpioPuerta2]; ok {
-			doorState = vm
-		}
-	}
+	doorState := puerta[uint(id)]
 
 	message := &pubsub.Message{
 		Timestamp: float64(time.Now().UnixNano()) / 1000000000,
@@ -103,17 +92,7 @@ func buildEventTampering(ctx actor.Context, id int32, value int64, pidGps *actor
 		}
 	}
 
-	doorState := uint(0)
-	switch id {
-	case 0:
-		if vm, ok := puerta[doors.GpioPuerta1]; ok {
-			doorState = vm
-		}
-	case 1:
-		if vm, ok := puerta[doors.GpioPuerta2]; ok {
-			doorState = vm
-		}
-	}
+	doorState := puerta[uint(id)]
 
 	message := &pubsub.Message{
 		Timestamp: float64(time.Now().UnixNano()) / 1000000000,
@@ -171,17 +150,7 @@ func buildEventAnomalies(ctx actor.Context, id int32, value int64, pidGps *actor
 		}
 	}
 
-	doorState := uint(0)
-	switch id {
-	case 0:
-		if vm, ok := puerta[doors.GpioPuerta1]; ok {
-			doorState = vm
-		}
-	case 1:
-		if vm, ok := puerta[doors.GpioPuerta2]; ok {
-			doorState = vm
-		}
-	}
+	doorState := puerta[uint(id)]
 
 	message := &pubsub.Message{
 		Timestamp: float64(time.Now().UnixNano()) / 1000000000,

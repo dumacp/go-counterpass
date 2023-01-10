@@ -1,6 +1,3 @@
-//go:build logirastreo
-// +build logirastreo
-
 package device
 
 import (
@@ -9,7 +6,7 @@ import (
 	logirastreo "github.com/dumacp/go-logirastreo/v1"
 )
 
-func NewDevice(port string, speed int) (Device, error) {
+func NewDeviceLogirastreo(port string, speed int) (Device, error) {
 	dev := logirastreo.NewDevice(port, speed, 3*time.Second)
 
 	if err := dev.Open(); err != nil {

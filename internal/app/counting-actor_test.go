@@ -73,7 +73,7 @@ func TestNewCountingActor(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewCountingActor()
+			got := NewCountingActor("test")
 			got.DisablePersistence(true)
 
 			props := actor.PropsFromFunc(got.Receive)

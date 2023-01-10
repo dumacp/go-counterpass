@@ -1,14 +1,9 @@
-//go:build extreme
-// +build extreme
-
 package listen
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"io"
-	"log"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -17,17 +12,7 @@ import (
 	"github.com/dumacp/sonar/ins50"
 )
 
-var timeout_samples int
-
-func init() {
-	flag.IntVar(&timeout_samples, "timeout", 3000, "timeout samples in millis")
-}
-
-const (
-	max_error = 3
-)
-
-func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenExtreme(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
 	var devv ins50.Device
@@ -55,10 +40,6 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 	rootctx := ctx.ActorSystem().Root
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
-		defer func() {
-			id := typeCounter >> 1
-			ctx.Send(self, &MsgListenError{ID: id})
-		}()
 		firstFrameCh1 := true
 		countErr := 0
 		tick1 := time.NewTicker(timeoutsamples)
@@ -71,12 +52,13 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 				logs.LogWarn.Println("device sonar_extreme is closed")
 				return
 			case <-ch1:
+				id := 0
 				tn := time.Now()
 				fmt.Printf("%s, request\n", time.Now().Format("02-01-2006 15:04:05.000"))
 
 				result, err := devv.ReadData()
 				if err != nil {
-					logs.LogWarn.Println(err)
+					// logs.LogWarn.Println(err)
 					if errors.Is(err, io.EOF) {
 						if time.Since(tn) < timeout/10 {
 							countErr++
@@ -84,8 +66,10 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					} else {
 						countErr++
 					}
-					log.Println(err)
+					fmt.Println(err)
 					if countErr > max_error {
+						ctx.Send(self, &MsgListenError{ID: 0})
+						ctx.Send(self, &MsgListenError{ID: 1})
 						return
 					}
 					break
@@ -97,8 +81,6 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					logs.LogInfo.Printf("first readbytes: [%s]\n", result.RawResponse())
 					firstFrameCh1 = false
 				}
-				// fmt.Printf("inputs (1): %d\n", inputs)
-				id := 0
 				if result.Inputs1() > 0 && uint(result.Inputs1()) != inputsFront {
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),

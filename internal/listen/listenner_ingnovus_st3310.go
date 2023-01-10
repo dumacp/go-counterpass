@@ -1,14 +1,9 @@
-//go:build st3310
-// +build st3310
-
 package listen
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"io"
-	"log"
 	"time"
 
 	"github.com/AsynkronIT/protoactor-go/actor"
@@ -17,17 +12,7 @@ import (
 	"github.com/dumacp/go-logs/pkg/logs"
 )
 
-var timeout_samples int
-
-func init() {
-	flag.IntVar(&timeout_samples, "timeout", 300, "timeout samples in millis")
-}
-
-const (
-	max_error = 3
-)
-
-func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenSt3310(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
@@ -56,10 +41,6 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 	rootctx := ctx.ActorSystem().Root
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
-		defer func() {
-			id := typeCounter >> 1
-			ctx.Send(self, &MsgListenError{ID: id})
-		}()
 		firstFrameCh1 := true
 		countErr := 0
 		tick1 := time.NewTicker(timeoutsamples)
@@ -70,14 +51,15 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 			select {
 			case <-quit:
 				logs.LogWarn.Println("device ingnovus st3310 is closed")
+				ctx.Send(self, &MsgListenError{ID: -1})
 				return
 			case <-ch1:
+				id := 0
 				tn := time.Now()
 				fmt.Printf("%s, request\n", time.Now().Format("02-01-2006 15:04:05.000"))
 
 				result, err := devv.Read()
 				if err != nil {
-					logs.LogWarn.Println(err)
 					if errors.Is(err, io.EOF) {
 						if time.Since(tn) < timeout/10 {
 							countErr++
@@ -85,8 +67,10 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					} else {
 						countErr++
 					}
-					log.Println(err)
+					fmt.Println(err)
 					if countErr > max_error {
+						ctx.Send(self, &MsgListenError{ID: 0})
+						ctx.Send(self, &MsgListenError{ID: 1})
 						return
 					}
 					break
@@ -104,8 +88,6 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					firstFrameCh1 = false
 				}
 
-				// fmt.Printf("inputs (1): %d\n", inputs)
-				id := 0
 				if result.Inputs1() > 0 && uint(result.Inputs1()) != inputsFront {
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),

@@ -19,8 +19,10 @@ type ListenActor struct {
 	typeCounter int
 	quit        chan int
 
-	sendConsole bool
-	evts        *eventstream.EventStream
+	sendConsole    bool
+	evts           *eventstream.EventStream
+	isListennerOk  bool
+	lastTryConnect time.Time
 }
 
 //NewListen create listen actor
@@ -71,6 +73,7 @@ func (a *ListenActor) Receive(ctx actor.Context) {
 	case *actor.Started:
 		// act.initlogs.Logs()
 		logs.LogInfo.Printf("actor started \"%s\"", ctx.Self().Id)
+		a.lastTryConnect = time.Now().Add(-10 * time.Minute)
 
 	case *actor.Stopping:
 		// case *messages.CountingActor:
@@ -101,18 +104,28 @@ func (a *ListenActor) Receive(ctx actor.Context) {
 		a.device = msg.Device
 	case *MsgListenError:
 		if a.evts != nil {
-			a.evts.Publish(msg)
 			a.evts.Publish(&device.StopDevice{})
 			a.evts.Publish(&device.StartDevice{})
 		}
-		// a.isConnected = false
-		// ctx.Send(ctx.Parent(), &msgPingError{})
-		// time.Sleep(3 * time.Second)
+		if a.isListennerOk {
+			a.isListennerOk = false
+			if a.evts != nil {
+				a.evts.Publish(msg)
+			}
+		} else if time.Since(a.lastTryConnect) > 3*time.Minute {
+			a.lastTryConnect = time.Now()
+			if a.evts != nil {
+				a.evts.Publish(msg)
+			}
+		}
 		fmt.Printf("listen(id=%d) error\n", msg.ID)
 	case *MsgToTest:
 		logs.LogBuild.Printf("test frame: %s", msg.Data)
 	case *MsgLogRequest:
 	case *messages.Event:
+		if !a.isListennerOk {
+			a.isListennerOk = true
+		}
 		if a.evts != nil {
 			a.evts.Publish(msg)
 		}

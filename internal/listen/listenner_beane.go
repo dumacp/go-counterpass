@@ -1,19 +1,8 @@
-//go:build (beane || !ingnovus) && (beane || !bea) && (beane || !sonar) && (beane || !optocontrol) && (beane || !extreme) && (beane || !st300) && (beane || !logirastreo) && (beane || !st3310)
-// +build beane !ingnovus
-// +build beane !bea
-// +build beane !sonar
-// +build beane !optocontrol
-// +build beane !extreme
-// +build beane !st300
-// +build beane !logirastreo
-// +build beane !st3310
-
-package beane
+package listen
 
 import (
 	"encoding/binary"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -25,17 +14,7 @@ import (
 	"github.com/dumacp/go-logs/pkg/logs"
 )
 
-var timeout_samples int
-
-const (
-	max_error = 3
-)
-
-func init() {
-	flag.IntVar(&timeout_samples, "timeout", 900, "timeout samples in millis")
-}
-
-func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenBeane(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
@@ -64,10 +43,6 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 	rootctx := ctx.ActorSystem().Root
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
-		defer func() {
-			id := typeCounter >> 1
-			ctx.Send(self, &MsgListenError{ID: id})
-		}()
 		var tamperingTimerBack = time.NewTimer(100 * time.Millisecond)
 		if !tamperingTimerBack.Stop() {
 			select {
@@ -109,6 +84,8 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 			select {
 			case <-quit:
 				logs.LogWarn.Println("device levis is closed")
+				ctx.Send(self, &MsgListenError{ID: 0})
+				ctx.Send(self, &MsgListenError{ID: 1})
 				return
 			case <-ch1:
 				tn := time.Now()
@@ -117,7 +94,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 				devv.SetSlaveID(1)
 				result, err := devv.ReadBytesRegister(0x0001, 22/2)
 				if err != nil {
-					logs.LogWarn.Printf("slaveID=1 error: %s", err)
+					fmt.Printf("slaveID=1 error: %s\n", err)
 					if errors.Is(err, io.EOF) {
 						if time.Since(tn) < timeout/10 {
 							countErr++
@@ -127,6 +104,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					}
 					log.Println(err)
 					if countErr > max_error {
+						ctx.Send(self, &MsgListenError{ID: id})
 						return
 					}
 					break
@@ -225,7 +203,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 				devv.SetSlaveID(2)
 				result, err := devv.ReadBytesRegister(0x0001, (22)/2)
 				if err != nil {
-					logs.LogWarn.Printf("slaveID=2 error: %s", err)
+					fmt.Printf("slaveID=2 error: %s\n", err)
 					if errors.Is(err, io.EOF) {
 						if time.Since(tn) < timeout/10 {
 							countErr++
@@ -235,6 +213,7 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 					}
 					log.Println(err)
 					if countErr > max_error {
+						ctx.Send(self, &MsgListenError{ID: id})
 						return
 					}
 					break
