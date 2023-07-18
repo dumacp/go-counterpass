@@ -219,7 +219,7 @@ func main() {
 	logs.LogInfo.Printf("back door counter START --  version: %s\n", showVersion)
 
 	go func() {
-		t1 := time.NewTicker(10 * time.Second)
+		t1 := time.NewTicker(1 * time.Second)
 		defer t1.Stop()
 		for range t1.C {
 			rootContext.Send(pidCounting, &app.MsgSendRegisters{})

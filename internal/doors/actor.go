@@ -8,11 +8,12 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/eventstream"
 	"github.com/dumacp/go-counterpass/internal/pubsub"
+	"github.com/dumacp/go-doors/doorsmsg"
 	"github.com/dumacp/go-logs/pkg/logs"
 	psub "github.com/dumacp/pubsub"
 )
 
-//Actor actor to listen events
+// Actor actor to listen events
 type Actor struct {
 	ctx  actor.Context
 	evts *eventstream.EventStream
@@ -74,7 +75,7 @@ func parseEvents(msg []byte) (interface{}, error) {
 	return result, nil
 }
 
-//Receive func Receive in actor
+// Receive func Receive in actor
 func (a *Actor) Receive(ctx actor.Context) {
 	logs.LogBuild.Printf("Message arrived in doorsActor: %T, %s",
 		ctx.Message(), ctx.Sender())
@@ -86,6 +87,19 @@ func (a *Actor) Receive(ctx actor.Context) {
 		if err := pubsub.Subscribe("EVENTS/doors", ctx.Self(), parseEvents); err != nil {
 			time.Sleep(3 * time.Second)
 			logs.LogError.Panic(err)
+		}
+		if err := pubsub.Subscribe("counterpass/doors", ctx.Self(), parseEvents); err != nil {
+			time.Sleep(3 * time.Second)
+			logs.LogError.Panic(err)
+		}
+		req := doorsmsg.DoorsStateRequest{
+			TopicResponse: "camera/doors",
+		}
+		data, err := json.Marshal(req)
+		if err != nil {
+			logs.LogError.Println(err)
+		} else {
+			Publish("DOORS", data)
 		}
 	case *actor.Stopping:
 		logs.LogWarn.Printf("\"%s\" - Stopped actor, reason -> %v", ctx.Self(), msg)
