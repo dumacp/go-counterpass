@@ -1,6 +1,7 @@
 package device
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -16,6 +17,8 @@ type Actor struct {
 	speedBaud  int
 	fmachinae  *fsm.FSM
 	evts       *eventstream.EventStream
+	contxt     context.Context
+	cancel     func()
 }
 
 func NewActor(port string, speed int, readTimeout time.Duration) actor.Actor {
@@ -40,14 +43,13 @@ func subscribe(ctx actor.Context, evs *eventstream.EventStream) {
 	fn := func(evt interface{}) {
 		rootctx.RequestWithCustomSender(pid, evt, self)
 	}
-	evs.SubscribeWithPredicate(fn,
-		func(evt interface{}) bool {
-			switch evt.(type) {
-			case *MsgDevice:
-				return true
-			}
-			return false
-		})
+	evs.Subscribe(fn).WithPredicate(func(evt interface{}) bool {
+		switch evt.(type) {
+		case *MsgDevice:
+			return true
+		}
+		return false
+	})
 }
 
 func (a *Actor) Receive(ctx actor.Context) {
@@ -57,18 +59,24 @@ func (a *Actor) Receive(ctx actor.Context) {
 
 	switch msg := ctx.Message().(type) {
 	case *actor.Started:
+		contxt, cancel := context.WithCancel(context.TODO())
+		a.contxt = contxt
+		a.cancel = cancel
 		ctx.Send(ctx.Self(), &StartDevice{})
 	case *actor.Stopping:
-		a.fmachinae.Event(eError)
+		a.fmachinae.Event(a.contxt, eError)
+		if a.cancel != nil {
+			a.cancel()
+		}
 	case *StartDevice:
-		if err := a.fmachinae.Event(eStarted); err != nil {
+		if err := a.fmachinae.Event(a.contxt, eStarted); err != nil {
 			logs.LogError.Printf("open device error: %s", err)
 		}
 	case *MsgDevice:
-		a.fmachinae.Event(eOpenned)
+		a.fmachinae.Event(a.contxt, eOpenned)
 		a.evts.Publish(msg)
 	case *StopDevice:
-		a.fmachinae.Event(eStop)
+		a.fmachinae.Event(a.contxt, eStop)
 	case *Subscribe:
 		if ctx.Sender() == nil {
 			break

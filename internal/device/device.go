@@ -13,6 +13,8 @@ func NewDevice(port string, speed int) (Device, error) {
 		return NewDeviceBaene(port, speed)
 	case "sonar":
 		return NewDeviceSonar(port, speed)
+	case "sonarstd":
+		return NewDeviceSonarEvents(port, speed)
 	case "extreme":
 		return NewDeviceExtreme(port, speed)
 	case "optocontrol-v301":
@@ -28,6 +30,6 @@ func NewDevice(port string, speed int) (Device, error) {
 	case "ingnovus":
 		return NewDeviceIngnovus(port, speed)
 	default:
-		return nil, fmt.Errorf("vendor device is invalid")
+		return nil, fmt.Errorf("vendor device is invalid (%s)", VendorCounter)
 	}
 }

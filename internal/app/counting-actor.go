@@ -26,7 +26,7 @@ type CountingActor struct {
 	persistence.Mixin
 	puertas            map[uint]uint
 	openState          map[int32]uint
-	disableDoorGpio    bool
+	enableDoorVerify   bool
 	disableSend        bool
 	counterType        int
 	disablePersistence bool
@@ -46,7 +46,7 @@ type CountingActor struct {
 	firstEventOutput1  bool
 }
 
-//NewCountingActor create CountingActor
+// NewCountingActor create CountingActor
 func NewCountingActor(vendor string) *CountingActor {
 	VendorCounter = vendor
 	count := &CountingActor{}
@@ -56,7 +56,7 @@ func NewCountingActor(vendor string) *CountingActor {
 	return count
 }
 
-//SetZeroOpenStateDoor0 set the open state in gpio door
+// SetZeroOpenStateDoor0 set the open state in gpio door
 func (a *CountingActor) SetZeroOpenStateDoor0(state bool) {
 	if state {
 		a.openState[0] = 0
@@ -65,7 +65,7 @@ func (a *CountingActor) SetZeroOpenStateDoor0(state bool) {
 	}
 }
 
-//SetZeroOpenStateDoor1 set the open state in gpio door
+// SetZeroOpenStateDoor1 set the open state in gpio door
 func (a *CountingActor) SetZeroOpenStateDoor1(state bool) {
 	if state {
 		a.openState[1] = 0
@@ -74,25 +74,25 @@ func (a *CountingActor) SetZeroOpenStateDoor1(state bool) {
 	}
 }
 
-//DisableDoorGpioListen Disable DoorGpio
-func (a *CountingActor) DisableDoorGpioListen(state bool) {
+// DisableDoorGpioListen Disable DoorGpio
+func (a *CountingActor) EnableDoorVerify(state bool) {
 	if state {
-		a.disableDoorGpio = true
+		a.enableDoorVerify = true
 	} else {
-		a.disableDoorGpio = false
+		a.enableDoorVerify = false
 	}
 }
 
-//CounterType set counter type
+// CounterType set counter type
 func (a *CountingActor) CounterType(tp int) {
 	a.counterType = tp
 }
 
-//SetGPStoConsole set gps to consolse
+// SetGPStoConsole set gps to consolse
 func (a *CountingActor) SetGPStoConsole(gpsConsole bool) {
 }
 
-//DisablePersistence disable persistence
+// DisablePersistence disable persistence
 func (a *CountingActor) DisablePersistence(disable bool) {
 	a.disablePersistence = disable
 }
@@ -188,7 +188,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 			logs.LogWarn.Println(err)
 			break
 		}
-		log.Printf("data: %q", data)
+		// log.Printf("data: %q", data)
 		if !a.disableSend {
 			pubsub.Publish(topicCounter, data)
 		}
@@ -279,7 +279,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 				diff := msg.GetValue() - a.rawInputs[id]
 
 				if diff > 0 && a.rawInputs[id] <= 0 {
-					if v, ok := a.puertas[uint(id)]; a.disableDoorGpio || !ok || v == a.openState[id] {
+					if v, ok := a.puertas[uint(id)]; !a.enableDoorVerify || !ok || v == a.openState[id] {
 						a.inputs[id] += 1
 
 						data, err := buildEventPass(ctx, int(id), msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
@@ -297,7 +297,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 						}
 					}
 				} else if diff > 0 && diff < 60 {
-					if v, ok := a.puertas[uint(id)]; a.disableDoorGpio || !ok || v == a.openState[id] {
+					if v, ok := a.puertas[uint(id)]; !a.enableDoorVerify || !ok || v == a.openState[id] {
 						a.inputs[id] += diff
 
 						data, err := buildEventPass(ctx, int(id), msg.GetType(), diff, a.pidGps, a.puertas, msg.Raw)
@@ -369,7 +369,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 				}
 				diff := msg.GetValue() - a.rawOutputs[id]
 				if diff > 0 && a.rawOutputs[id] <= 0 {
-					if v, ok := a.puertas[uint(id)]; a.disableDoorGpio || !ok || v == a.openState[id] {
+					if v, ok := a.puertas[uint(id)]; !a.enableDoorVerify || !ok || v == a.openState[id] {
 						a.outputs[id] += 1
 						data, err := buildEventPass(ctx, int(id), msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
 						if err != nil {
@@ -386,7 +386,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 						}
 					}
 				} else if diff > 0 && diff < 60 {
-					if v, ok := a.puertas[uint(id)]; a.disableDoorGpio || !ok || v == a.openState[id] {
+					if v, ok := a.puertas[uint(id)]; !a.enableDoorVerify || !ok || v == a.openState[id] {
 						a.outputs[id] += diff
 						data, err := buildEventPass(ctx, int(id), msg.GetType(), diff, a.pidGps, a.puertas, msg.Raw)
 						if err != nil {

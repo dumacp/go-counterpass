@@ -14,6 +14,7 @@ import (
 	"github.com/dumacp/go-optocontrol"
 	"github.com/dumacp/sonar/contador"
 	"github.com/dumacp/sonar/ins50"
+	"github.com/dumacp/sonar/protostd"
 )
 
 const (
@@ -25,6 +26,8 @@ var timeout_samples int
 func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
 	timeout_samples = device.TimeoutSamples
 	switch dev.(type) {
+	case protostd.Device:
+		return ListenSonarEvents(dev, quit, ctx, typeCounter, externalConsole)
 	case *contador.Device:
 		return ListenSonar(dev, quit, ctx, typeCounter, externalConsole)
 	case levis.Device:
@@ -46,5 +49,5 @@ func Listen(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int
 	case optocontrol.Device_v301:
 		return ListenOptocontrolV301(dev, quit, ctx, typeCounter, externalConsole)
 	}
-	return fmt.Errorf("vendor device is invalid")
+	return fmt.Errorf("vendor device is invalid (%T)", dev)
 }

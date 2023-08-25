@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-var VendorArray = []string{"beane", "sonar", "extreme", "optocontrol", "optocontrol-v301",
+var VendorArray = []string{"beane", "sonar", "sonarstd", "extreme", "optocontrol", "optocontrol-v301",
 	"ingnovus-st300", "ingnovus-st3310", "ingnovus-st3310H04", "ingnovus"}
 var VendorCounter string
 var TimeoutSamples int
@@ -41,7 +41,7 @@ func verifyTimeoutSamples(vendor string) {
 	switch vendor {
 	case "beane", "optocontrol", "optocontrol-v301":
 		TimeoutSamples = 900
-	case "extreme", "logirastreo", "ingnovus-st300":
+	case "extreme", "logirastreo", "ingnovus-st300", "sonarstd", "sonar":
 		TimeoutSamples = 3000
 	case "ingnovus-st3310", "ingnovus-st3310H04":
 		TimeoutSamples = 300

@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	showVersion = "2.1.3"
+	showVersion = "2.1.4"
 )
 
 var debug bool
@@ -38,6 +38,7 @@ var version bool
 // var loglevel int
 var isZeroOpenStateDoor0 bool
 var isZeroOpenStateDoor1 bool
+var enableDoorVerify bool
 var disableDoorGpioListen bool
 var typeCounterDoor int = -1
 var sendGpsToConsole bool
@@ -65,7 +66,8 @@ func init() {
 	// flag.BoolVar(&vendor, "vendor", false, "show supported vendor")
 	flag.BoolVar(&isZeroOpenStateDoor0, "zeroOpenStateDoor0", false, "Is Zero the open state in front door?")
 	flag.BoolVar(&isZeroOpenStateDoor0, "zeroOpenStateDoor1", false, "Is Zero the open state in back door?")
-	flag.BoolVar(&disableDoorGpioListen, "disableDoorGpioListen", false, "disable DoorGpio Listen")
+	flag.BoolVar(&enableDoorVerify, "enableDoorVerify", false, "enable the verification function for the door in the counter system")
+	flag.BoolVar(&disableDoorGpioListen, "disableDoorGpioListen", false, "DEPRECATED")
 	flag.BoolVar(&sendGpsToConsole, "sendGpsToConsole", false, "Send GPS frame to Sonar console?")
 	flag.BoolVar(&simulate, "simulate", false, "Simulate Test data")
 }
@@ -112,14 +114,14 @@ func main() {
 	}
 
 	var pidDoors *actor.PID
-	if !disableDoorGpioListen {
-		actorDoors := doors.NewActor()
-		propsDoors := actor.PropsFromProducer(func() actor.Actor { return actorDoors })
-		pidDoors, err = rootContext.SpawnNamed(propsDoors, "doors")
-		if err != nil {
-			logs.LogError.Println(err)
-		}
+	// if !disableDoorGpioListen {
+	actorDoors := doors.NewActor()
+	propsDoors := actor.PropsFromProducer(func() actor.Actor { return actorDoors })
+	pidDoors, err = rootContext.SpawnNamed(propsDoors, "doors")
+	if err != nil {
+		logs.LogError.Println(err)
 	}
+	// }
 
 	actorDevice := device.NewActor(socket, baudRate, 300*time.Millisecond)
 	propDevice := actor.PropsFromProducer(func() actor.Actor { return actorDevice })
@@ -139,7 +141,7 @@ func main() {
 
 	counting.SetZeroOpenStateDoor0(isZeroOpenStateDoor0)
 	counting.SetZeroOpenStateDoor1(isZeroOpenStateDoor1)
-	counting.DisableDoorGpioListen(disableDoorGpioListen)
+	counting.EnableDoorVerify(enableDoorVerify)
 	counting.CounterType(typeCounterDoor)
 	counting.SetGPStoConsole(sendGpsToConsole)
 
@@ -175,12 +177,10 @@ func main() {
 		&app.MsgRegisterGPS{},
 		pidGps)
 
-	if !disableDoorGpioListen {
-		rootContext.RequestWithCustomSender(
-			pidDoors,
-			&doors.Subscribe{},
-			pidCounting)
-	}
+	rootContext.RequestWithCustomSender(
+		pidDoors,
+		&doors.Subscribe{},
+		pidCounting)
 
 	if mqtt {
 		rootContext.Send(pidCounting, &app.MsgSendEvents{Data: false})
@@ -219,7 +219,7 @@ func main() {
 	logs.LogInfo.Printf("back door counter START --  version: %s\n", showVersion)
 
 	go func() {
-		t1 := time.NewTicker(1 * time.Second)
+		t1 := time.NewTicker(5 * time.Second)
 		defer t1.Stop()
 		for range t1.C {
 			rootContext.Send(pidCounting, &app.MsgSendRegisters{})

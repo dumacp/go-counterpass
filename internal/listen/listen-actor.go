@@ -11,7 +11,7 @@ import (
 	"github.com/dumacp/go-logs/pkg/logs"
 )
 
-//ListenActor actor to listen events
+// ListenActor actor to listen events
 type ListenActor struct {
 	context     actor.Context
 	device      interface{}
@@ -25,7 +25,7 @@ type ListenActor struct {
 	lastTryConnect time.Time
 }
 
-//NewListen create listen actor
+// NewListen create listen actor
 func NewListen(typeCounter int) actor.Actor {
 	act := &ListenActor{}
 	act.typeCounter = typeCounter
@@ -43,8 +43,9 @@ func subscribe(ctx actor.Context, evs *eventstream.EventStream) {
 
 	fn := func(evt interface{}) {
 		rootctx.RequestWithCustomSender(pid, evt, self)
+
 	}
-	evs.SubscribeWithPredicate(fn, func(evt interface{}) bool {
+	evs.Subscribe(fn).WithPredicate(func(evt interface{}) bool {
 		switch evt.(type) {
 		case *MsgListenError, *MsgListenStarted,
 			*messages.Event, *device.CloseDevice, *device.StartDevice, *device.StopDevice:
@@ -52,6 +53,14 @@ func subscribe(ctx actor.Context, evs *eventstream.EventStream) {
 		}
 		return false
 	})
+	// evs.SubscribeWithPredicate(fn, func(evt interface{}) bool {
+	// 	switch evt.(type) {
+	// 	case *MsgListenError, *MsgListenStarted,
+	// 		*messages.Event, *device.CloseDevice, *device.StartDevice, *device.StopDevice:
+	// 		return true
+	// 	}
+	// 	return false
+	// })
 }
 
 func (act *ListenActor) SendToConsole(send bool) {
@@ -62,7 +71,7 @@ func (act *ListenActor) Test(test bool) {
 	act.test = test
 }
 
-//Receive func Receive in actor
+// Receive func Receive in actor
 func (a *ListenActor) Receive(ctx actor.Context) {
 	fmt.Printf("actor \"%s\", message: %v, %T\n", ctx.Self().GetId(),
 		ctx.Message(), ctx.Message())
@@ -92,6 +101,8 @@ func (a *ListenActor) Receive(ctx actor.Context) {
 		}
 
 		a.quit = make(chan int)
+
+		// fmt.Printf("device listen (%T)\n", msg.Device)
 
 		if err := Listen(msg.Device, a.quit, ctx, a.typeCounter, a.sendConsole); err != nil {
 			logs.LogError.Println(err)

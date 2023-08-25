@@ -36,7 +36,7 @@ func subscribe(ctx actor.Context, evs *eventstream.EventStream) {
 	fn := func(evt interface{}) {
 		rootctx.RequestWithCustomSender(pid, evt, self)
 	}
-	evs.SubscribeWithPredicate(fn, func(evt interface{}) bool {
+	evs.Subscribe(fn).WithPredicate(func(evt interface{}) bool {
 		switch evt.(type) {
 		case *MsgDoor:
 			return true
@@ -93,13 +93,13 @@ func (a *Actor) Receive(ctx actor.Context) {
 			logs.LogError.Panic(err)
 		}
 		req := doorsmsg.DoorsStateRequest{
-			TopicResponse: "camera/doors",
+			TopicResponse: "counterpass/doors",
 		}
 		data, err := json.Marshal(req)
 		if err != nil {
 			logs.LogError.Println(err)
 		} else {
-			Publish("DOORS", data)
+			pubsub.Publish("DOORS", data)
 		}
 	case *actor.Stopping:
 		logs.LogWarn.Printf("\"%s\" - Stopped actor, reason -> %v", ctx.Self(), msg)

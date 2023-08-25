@@ -1,6 +1,7 @@
 package device
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -38,22 +39,22 @@ func (a *Actor) Fsm() {
 
 	var disp Device
 	callbacksfsm := fsm.Callbacks{
-		"before_event": func(e *fsm.Event) {
+		"before_event": func(_ context.Context, e *fsm.Event) {
 			if e.Err != nil {
 				// log.Println(e.Err)
 				e.Cancel(e.Err)
 			}
 		},
-		"leave_state": func(e *fsm.Event) {
+		"leave_state": func(_ context.Context, e *fsm.Event) {
 			if e.Err != nil {
 				// log.Println(e.Err)
 				e.Cancel(e.Err)
 			}
 		},
-		"enter_state": func(e *fsm.Event) {
+		"enter_state": func(_ context.Context, e *fsm.Event) {
 			logs.LogBuild.Printf("FSM APP DEVICE, state src: %s, state dst: %s", e.Src, e.Dst)
 		},
-		beforeEvent(eStarted): func(e *fsm.Event) {
+		beforeEvent(eStarted): func(_ context.Context, e *fsm.Event) {
 			var err error
 
 			if disp != nil {
@@ -79,7 +80,7 @@ func (a *Actor) Fsm() {
 			}
 			a.ctx.Send(a.ctx.Self(), &MsgDevice{Device: disp})
 		},
-		enterState(sClose): func(e *fsm.Event) {
+		enterState(sClose): func(_ context.Context, e *fsm.Event) {
 			if disp == nil {
 				return
 			}
