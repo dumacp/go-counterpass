@@ -1,6 +1,7 @@
 package listen
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +13,7 @@ import (
 	"github.com/dumacp/go-optocontrol"
 )
 
-func ListenOptocontrol(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenOptocontrol(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 	timeout := time.Duration(timeout_samples) * time.Millisecond
 
 	var devv optocontrol.Device
@@ -57,7 +58,7 @@ func ListenOptocontrol(dev interface{}, quit <-chan int, ctx actor.Context, type
 		}
 		for {
 			select {
-			case <-quit:
+			case <-quit.Done():
 				logs.LogWarn.Println("device optocontrol is closed")
 				ctx.Send(self, &MsgListenError{ID: 0})
 				ctx.Send(self, &MsgListenError{ID: 1})

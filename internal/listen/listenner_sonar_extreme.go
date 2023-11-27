@@ -1,6 +1,7 @@
 package listen
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +13,7 @@ import (
 	"github.com/dumacp/sonar/ins50"
 )
 
-func ListenExtreme(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenExtreme(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
 	var devv ins50.Device
@@ -48,7 +49,7 @@ func ListenExtreme(dev interface{}, quit <-chan int, ctx actor.Context, typeCoun
 
 		for {
 			select {
-			case <-quit:
+			case <-quit.Done():
 				logs.LogWarn.Println("device sonar_extreme is closed")
 				return
 			case <-ch1:

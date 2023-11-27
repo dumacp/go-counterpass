@@ -1,6 +1,7 @@
 package listen
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +13,7 @@ import (
 	"github.com/dumacp/go-logs/pkg/logs"
 )
 
-func ListenLogirastreo(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenLogirastreo(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
@@ -45,7 +46,7 @@ func ListenLogirastreo(dev interface{}, quit <-chan int, ctx actor.Context, type
 
 		for {
 			select {
-			case <-quit:
+			case <-quit.Done():
 				logs.LogWarn.Println("device logirastreo is closed")
 				ctx.Send(self, &MsgListenError{ID: 0})
 				ctx.Send(self, &MsgListenError{ID: 1})

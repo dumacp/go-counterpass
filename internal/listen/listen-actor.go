@@ -1,6 +1,7 @@
 package listen
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -13,16 +14,15 @@ import (
 
 // ListenActor actor to listen events
 type ListenActor struct {
-	context     actor.Context
-	device      interface{}
-	test        bool
-	typeCounter int
-	quit        chan int
-
-	sendConsole    bool
+	context        actor.Context
+	device         interface{}
+	typeCounter    int
 	evts           *eventstream.EventStream
-	isListennerOk  bool
 	lastTryConnect time.Time
+	cancel         func()
+	sendConsole    bool
+	isListennerOk  bool
+	test           bool
 }
 
 // NewListen create listen actor
@@ -85,27 +85,22 @@ func (a *ListenActor) Receive(ctx actor.Context) {
 		a.lastTryConnect = time.Now().Add(-10 * time.Minute)
 
 	case *actor.Stopping:
+		if a.cancel != nil {
+			a.cancel()
+		}
 		// case *messages.CountingActor:
 		// 	act.countingActor = actor.NewPID(msg.Address, msg.ID)
 	case *device.MsgDevice:
-		if a.quit != nil {
-			select {
-			case _, ok := <-a.quit:
-				if ok {
-					close(a.quit)
-				}
-			default:
-				close(a.quit)
-			}
-			time.Sleep(300 * time.Millisecond)
+		if a.cancel != nil {
+			a.cancel()
 		}
-
-		a.quit = make(chan int)
-
 		// fmt.Printf("device listen (%T)\n", msg.Device)
 
-		if err := Listen(msg.Device, a.quit, ctx, a.typeCounter, a.sendConsole); err != nil {
-			logs.LogError.Println(err)
+		contxt, cancel := context.WithCancel(context.Background())
+		a.cancel = cancel
+
+		if err := Listen(msg.Device, contxt, ctx, a.typeCounter, a.sendConsole); err != nil {
+			logs.LogError.Printf("listen device error: %s", err)
 			time.Sleep(1 * time.Second)
 			id := a.typeCounter >> 1
 			ctx.Send(ctx.Self(), &MsgListenError{ID: id})

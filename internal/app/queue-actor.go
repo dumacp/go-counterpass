@@ -101,7 +101,7 @@ func (a *QueueActor) Receive(ctx actor.Context) {
 			}
 			return nil
 		}(); err != nil {
-			logs.LogWarn.Println(err)
+			logs.LogWarn.Printf("message queueEvent error: %s", err)
 		}
 	}
 }

@@ -6,7 +6,7 @@ import (
 )
 
 var VendorArray = []string{"beane", "sonar", "sonarstd", "extreme", "optocontrol", "optocontrol-v301",
-	"ingnovus-st300", "ingnovus-st3310", "ingnovus-st3310H04", "ingnovus"}
+	"ingnovus-st300", "ingnovus-st3310", "ingnovus-st3310H04", "ingnovus", "irma"}
 var VendorCounter string
 var TimeoutSamples int
 

@@ -155,7 +155,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 		}
 		data, err := registersMap(a.inputs, a.outputs, a.anomalies, a.tampering, a.counterType)
 		if err != nil {
-			logs.LogWarn.Println(err)
+			logs.LogWarn.Printf("registersMap error: %s", err)
 			break
 		}
 		log.Printf("data: %q", data)
@@ -339,7 +339,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 				return nil
 
 			}(); err != nil {
-				logs.LogWarn.Println(err)
+				logs.LogWarn.Printf("message Input error: %s", err)
 			}
 
 		case messages.OUTPUT:
@@ -429,7 +429,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 				}
 				return nil
 			}(); err != nil {
-				logs.LogWarn.Println(err)
+				logs.LogWarn.Printf("message Output error: %s", err)
 			}
 		case messages.TAMPERING:
 			if err := func() error {
@@ -460,7 +460,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 				}
 				return nil
 			}(); err != nil {
-				logs.LogWarn.Println(err)
+				logs.LogWarn.Printf("message Tampering error: %s", err)
 			}
 		case messages.ANOMALY:
 			if err := func() error {
@@ -491,14 +491,14 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 				}
 				return nil
 			}(); err != nil {
-				logs.LogWarn.Println(err)
+				logs.LogWarn.Printf("message Anomaly error: %s", err)
 			}
 		}
 	case *listen.MsgListenError:
 		logs.LogWarn.Printf("counter(id=%d) listen error", msg.ID)
 		data, err := buildListenError(ctx, int32(msg.ID), 1, a.pidGps)
 		if err != nil {
-			logs.LogWarn.Println(err)
+			logs.LogWarn.Printf("message listenError: %s", err)
 			break
 		}
 		if !a.disableSend {

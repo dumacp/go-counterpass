@@ -9,6 +9,8 @@ type Device interface {
 func NewDevice(port string, speed int) (Device, error) {
 
 	switch VendorCounter {
+	case "irma":
+		return NewIrma(port)
 	case "beane":
 		return NewDeviceBaene(port, speed)
 	case "sonar":

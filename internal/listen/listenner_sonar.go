@@ -3,6 +3,7 @@ package listen
 import (
 	"bytes"
 	"container/list"
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -20,7 +21,7 @@ type mem struct {
 	locks   []int64
 }
 
-func ListenSonar(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenSonar(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	var devv *contador.Device
 

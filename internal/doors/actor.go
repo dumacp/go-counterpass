@@ -8,9 +8,9 @@ import (
 	"github.com/AsynkronIT/protoactor-go/actor"
 	"github.com/AsynkronIT/protoactor-go/eventstream"
 	"github.com/dumacp/go-counterpass/internal/pubsub"
+	"github.com/dumacp/go-doors/api"
 	"github.com/dumacp/go-doors/doorsmsg"
 	"github.com/dumacp/go-logs/pkg/logs"
-	psub "github.com/dumacp/pubsub"
 )
 
 // Actor actor to listen events
@@ -47,15 +47,9 @@ func subscribe(ctx actor.Context, evs *eventstream.EventStream) {
 
 func parseEvents(msg []byte) (interface{}, error) {
 
-	type ValueDoor struct {
-		Coord string `json:"coord"`
-		ID    int    `json:"id"`
-		State int    `json:"state"`
-	}
+	val := &api.ValuePubSubEvent{}
 
-	val := &ValueDoor{}
-
-	event := new(psub.Message)
+	event := new(api.PubSubEvent)
 	event.Value = val
 
 	if err := json.Unmarshal(msg, event); err != nil {
@@ -64,13 +58,28 @@ func parseEvents(msg []byte) (interface{}, error) {
 
 	result := new(MsgDoor)
 
-	resVal, ok := event.Value.(*ValueDoor)
-	if !ok {
-		return nil, fmt.Errorf("empty value in door message: %v", event)
+	// resVal, ok := event.Value.(*api.ValuePubSubEvent)
+	// if !ok {
+	// 	return nil, fmt.Errorf("empty value in door message: %v", event)
+	// }
+
+	result.ID = uint(val.Id)
+	result.Value = uint(val.State)
+
+	return result, nil
+}
+
+func parseEvents2(msg []byte) (interface{}, error) {
+
+	val := &api.DoorState{}
+
+	if err := json.Unmarshal(msg, val); err != nil {
+		return nil, fmt.Errorf("parse Doorstate error: %v", val)
 	}
 
-	result.ID = uint(resVal.ID)
-	result.Value = uint(resVal.State)
+	result := new(MsgDoor)
+	result.ID = uint(val.Id)
+	result.Value = uint(val.Value)
 
 	return result, nil
 }
@@ -88,7 +97,7 @@ func (a *Actor) Receive(ctx actor.Context) {
 			time.Sleep(3 * time.Second)
 			logs.LogError.Panic(err)
 		}
-		if err := pubsub.Subscribe("counterpass/doors", ctx.Self(), parseEvents); err != nil {
+		if err := pubsub.Subscribe("counterpass/doors", ctx.Self(), parseEvents2); err != nil {
 			time.Sleep(3 * time.Second)
 			logs.LogError.Panic(err)
 		}
@@ -97,7 +106,7 @@ func (a *Actor) Receive(ctx actor.Context) {
 		}
 		data, err := json.Marshal(req)
 		if err != nil {
-			logs.LogError.Println(err)
+			logs.LogError.Printf("subscribe error: %s", err)
 		} else {
 			pubsub.Publish("DOORS", data)
 		}

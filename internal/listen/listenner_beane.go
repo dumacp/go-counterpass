@@ -1,6 +1,7 @@
 package listen
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 	"github.com/dumacp/go-logs/pkg/logs"
 )
 
-func ListenBeane(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenBeane(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
@@ -82,7 +83,7 @@ func ListenBeane(dev interface{}, quit <-chan int, ctx actor.Context, typeCounte
 		countErr := 0
 		for {
 			select {
-			case <-quit:
+			case <-quit.Done():
 				logs.LogWarn.Println("device levis is closed")
 				ctx.Send(self, &MsgListenError{ID: 0})
 				ctx.Send(self, &MsgListenError{ID: 1})
@@ -102,7 +103,7 @@ func ListenBeane(dev interface{}, quit <-chan int, ctx actor.Context, typeCounte
 					} else {
 						countErr++
 					}
-					log.Println(err)
+					log.Printf("read register error: %s", err)
 					if countErr > max_error {
 						ctx.Send(self, &MsgListenError{ID: id})
 						return
@@ -211,7 +212,7 @@ func ListenBeane(dev interface{}, quit <-chan int, ctx actor.Context, typeCounte
 					} else {
 						countErr++
 					}
-					log.Println(err)
+					log.Printf("read register error: %s", err)
 					if countErr > max_error {
 						ctx.Send(self, &MsgListenError{ID: id})
 						return

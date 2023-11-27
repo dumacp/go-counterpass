@@ -1,6 +1,7 @@
 package listen
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +13,7 @@ import (
 	"github.com/dumacp/go-logs/pkg/logs"
 )
 
-func ListenSt3310(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenSt3310(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
@@ -49,7 +50,7 @@ func ListenSt3310(dev interface{}, quit <-chan int, ctx actor.Context, typeCount
 
 		for {
 			select {
-			case <-quit:
+			case <-quit.Done():
 				logs.LogWarn.Println("device ingnovus st3310 is closed")
 				ctx.Send(self, &MsgListenError{ID: -1})
 				return

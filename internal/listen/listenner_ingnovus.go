@@ -1,6 +1,7 @@
 package listen
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/dumacp/go-logs/pkg/logs"
 )
 
-func ListenIngnovus(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenIngnovus(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	var devv ingnovus.Device
 
@@ -34,7 +35,7 @@ func ListenIngnovus(dev interface{}, quit <-chan int, ctx actor.Context, typeCou
 
 		for {
 			select {
-			case <-quit:
+			case <-quit.Done():
 				logs.LogWarn.Println("device levis is closed")
 				ctx.Send(self, &MsgListenError{ID: 0})
 				ctx.Send(self, &MsgListenError{ID: 1})

@@ -1,6 +1,7 @@
 package listen
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +13,7 @@ import (
 	"github.com/dumacp/sonar/protostd"
 )
 
-func ListenSonarEvents(dev interface{}, quit <-chan int, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenSonarEvents(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
 	var devv protostd.Device
@@ -51,7 +52,7 @@ func ListenSonarEvents(dev interface{}, quit <-chan int, ctx actor.Context, type
 
 		for {
 			select {
-			case <-quit:
+			case <-quit.Done():
 				logs.LogWarn.Println("device sonar_std is closed")
 				return
 			case <-ch1:

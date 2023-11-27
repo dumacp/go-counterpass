@@ -19,7 +19,7 @@ var parseEvent = func(src []byte) proto.Message {
 	copy(srcCopy, src)
 	err := proto.Unmarshal(srcCopy, i)
 	if err != nil {
-		log.Println(err)
+		log.Printf("persistence error: %s", err)
 		return nil
 	}
 	// log.Printf("recovery EVENT: %v", i)
@@ -30,7 +30,7 @@ var parseSnapshot = func(src []byte) proto.Message {
 	i := new(messages.Snapshot)
 	err := proto.Unmarshal(src, i)
 	if err != nil {
-		log.Println(err)
+		log.Printf("persistence error: %s", err)
 		return nil
 	}
 	//log.Printf("recovery SNAP: %v", i)
@@ -52,7 +52,7 @@ func newProvider(pathdb string, snapshotInterval int) (*provider, error) {
 	}, nil
 }
 
-//GetState implementation for actor persistence
+// GetState implementation for actor persistence
 func (p *provider) GetState() persistence.ProviderState {
 	return p.providerState
 }

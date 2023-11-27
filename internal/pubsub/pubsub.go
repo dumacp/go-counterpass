@@ -43,7 +43,7 @@ type pubsubActor struct {
 var instance *pubsubActor
 var once sync.Once
 
-//getInstance create pubsub Gateway
+// getInstance create pubsub Gateway
 func getInstance(ctx *actor.RootContext) *pubsubActor {
 
 	once.Do(func() {
@@ -64,7 +64,7 @@ func getInstance(ctx *actor.RootContext) *pubsubActor {
 	return instance
 }
 
-//Init init pubsub instance
+// Init init pubsub instance
 func Init(ctx *actor.RootContext) error {
 	defer time.Sleep(3 * time.Second)
 	if getInstance(ctx) == nil {
@@ -83,12 +83,12 @@ type subscribeMSG struct {
 	parse func([]byte) (interface{}, error)
 }
 
-//Publish function to publish messages in pubsub gateway
+// Publish function to publish messages in pubsub gateway
 func Publish(topic string, msg []byte) {
 	getInstance(nil).ctx.Send(instance.ctx.Self(), &publishMSG{topic: topic, msg: msg})
 }
 
-//Subscribe subscribe to topics
+// Subscribe subscribe to topics
 func Subscribe(topic string, pid *actor.PID, parse func([]byte) (interface{}, error)) error {
 	instance := getInstance(nil)
 	subs := &subscribeMSG{pid: pid, parse: parse}
@@ -111,7 +111,7 @@ func (ps *pubsubActor) subscribe(topic string, subs *subscribeMSG) error {
 		m.Ack()
 		msg, err := subs.parse(m.Payload())
 		if err != nil {
-			log.Println(err)
+			log.Printf("parse msg error (topic: %q) (payload: %q): %s", m.Topic(), m.Payload(), err)
 			return
 		}
 		// logs.LogBuild.Printf("parse payload-> %s", msg)
@@ -125,7 +125,7 @@ func (ps *pubsubActor) subscribe(topic string, subs *subscribeMSG) error {
 	return nil
 }
 
-//Receive function
+// Receive function
 func (ps *pubsubActor) Receive(ctx actor.Context) {
 	logs.LogBuild.Printf("Message arrived in pubsubActor: %s, %T, %s",
 		ctx.Message(), ctx.Message(), ctx.Sender())
