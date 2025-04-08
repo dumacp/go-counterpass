@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/messages"
 	"github.com/dumacp/go-logs/pkg/logs"
 )
@@ -35,7 +35,7 @@ func (a *tamperingActor) Receive(ctx actor.Context) {
 		logs.LogInfo.Printf("actor started \"%s\"", ctx.Self().Id)
 
 	case *messages.Event:
-		if msg.GetType() != messages.TAMPERING {
+		if msg.GetType() != messages.Event_TAMPERING {
 			break
 		}
 		select {
@@ -88,7 +88,7 @@ func tamperingFlipFlop(quit <-chan int) chan *messages.Event {
 					switch evt := value.Interface().(type) {
 					case *messages.Event:
 						// fmt.Printf("n: %d, value: %v, ok: %v\n", n, value, ok)
-						if evt.GetType() != messages.TAMPERING {
+						if evt.GetType() != messages.Event_TAMPERING {
 							break
 						}
 						if _, ok := mem[evt.GetId()]; !ok {

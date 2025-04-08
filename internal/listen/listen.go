@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/internal/device"
 	"github.com/dumacp/go-ingnovus"
 	"github.com/dumacp/go-ingnovus/st300"

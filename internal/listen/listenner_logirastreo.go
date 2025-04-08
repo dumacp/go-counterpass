@@ -7,13 +7,13 @@ import (
 	"io"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/messages"
 	logirastreo "github.com/dumacp/go-logirastreo/v1"
 	"github.com/dumacp/go-logs/pkg/logs"
 )
 
-func ListenLogirastreo(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenLogirastreo(dev interface{}, contxt context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
@@ -38,6 +38,8 @@ func ListenLogirastreo(dev interface{}, quit context.Context, ctx actor.Context,
 	rootctx := ctx.ActorSystem().Root
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
+		quit, cancel := context.WithCancel(contxt)
+		defer cancel()
 		firstFrameCh1 := true
 		countErr := 0
 		tick1 := time.NewTicker(timeoutsamples)
@@ -88,7 +90,7 @@ func ListenLogirastreo(dev interface{}, quit context.Context, ctx actor.Context,
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Inputs1()),
-						Type:  messages.INPUT,
+						Type:  messages.Event_INPUT,
 					})
 				}
 				inputsFront = uint(result.Inputs1())
@@ -96,7 +98,7 @@ func ListenLogirastreo(dev interface{}, quit context.Context, ctx actor.Context,
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Outputs1()),
-						Type:  messages.OUTPUT,
+						Type:  messages.Event_OUTPUT,
 					})
 				}
 				outputsFront = uint(result.Outputs1())
@@ -104,7 +106,7 @@ func ListenLogirastreo(dev interface{}, quit context.Context, ctx actor.Context,
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Locks1()),
-						Type:  messages.TAMPERING,
+						Type:  messages.Event_TAMPERING,
 					})
 				}
 				tamperingFront = uint(result.Locks1())
@@ -114,7 +116,7 @@ func ListenLogirastreo(dev interface{}, quit context.Context, ctx actor.Context,
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Inputs2()),
-						Type:  messages.INPUT,
+						Type:  messages.Event_INPUT,
 					})
 				}
 				inputsBack = uint(result.Inputs2())
@@ -122,7 +124,7 @@ func ListenLogirastreo(dev interface{}, quit context.Context, ctx actor.Context,
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Outputs2()),
-						Type:  messages.OUTPUT,
+						Type:  messages.Event_OUTPUT,
 					})
 				}
 				outputsBack = uint(result.Outputs2())
@@ -131,7 +133,7 @@ func ListenLogirastreo(dev interface{}, quit context.Context, ctx actor.Context,
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Locks2()),
-						Type:  messages.TAMPERING,
+						Type:  messages.Event_TAMPERING,
 					})
 				}
 				tamperingBack = uint(result.Locks2())

@@ -7,13 +7,13 @@ import (
 	"io"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/messages"
 	"github.com/dumacp/go-logs/pkg/logs"
 	"github.com/dumacp/sonar/ins50"
 )
 
-func ListenExtreme(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenExtreme(dev interface{}, contxt context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
 	var devv ins50.Device
@@ -41,6 +41,8 @@ func ListenExtreme(dev interface{}, quit context.Context, ctx actor.Context, typ
 	rootctx := ctx.ActorSystem().Root
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
+		quit, cancel := context.WithCancel(contxt)
+		defer cancel()
 		firstFrameCh1 := true
 		countErr := 0
 		tick1 := time.NewTicker(timeoutsamples)
@@ -86,7 +88,7 @@ func ListenExtreme(dev interface{}, quit context.Context, ctx actor.Context, typ
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Inputs1()),
-						Type:  messages.INPUT,
+						Type:  messages.Event_INPUT,
 					})
 				}
 				inputsFront = uint(result.Inputs1())
@@ -94,7 +96,7 @@ func ListenExtreme(dev interface{}, quit context.Context, ctx actor.Context, typ
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Outputs1()),
-						Type:  messages.OUTPUT,
+						Type:  messages.Event_OUTPUT,
 					})
 				}
 				outputsFront = uint(result.Outputs1())
@@ -102,7 +104,7 @@ func ListenExtreme(dev interface{}, quit context.Context, ctx actor.Context, typ
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Locks1()),
-						Type:  messages.TAMPERING,
+						Type:  messages.Event_TAMPERING,
 					})
 				}
 				tamperingFront = uint(result.Locks1())
@@ -112,7 +114,7 @@ func ListenExtreme(dev interface{}, quit context.Context, ctx actor.Context, typ
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Inputs2()),
-						Type:  messages.INPUT,
+						Type:  messages.Event_INPUT,
 					})
 				}
 				inputsBack = uint(result.Inputs2())
@@ -120,7 +122,7 @@ func ListenExtreme(dev interface{}, quit context.Context, ctx actor.Context, typ
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Outputs2()),
-						Type:  messages.OUTPUT,
+						Type:  messages.Event_OUTPUT,
 					})
 				}
 				outputsBack = uint(result.Outputs2())
@@ -129,7 +131,7 @@ func ListenExtreme(dev interface{}, quit context.Context, ctx actor.Context, typ
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Locks2()),
-						Type:  messages.TAMPERING,
+						Type:  messages.Event_TAMPERING,
 					})
 				}
 				tamperingBack = uint(result.Locks2())

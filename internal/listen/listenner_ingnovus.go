@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/messages"
 	"github.com/dumacp/go-ingnovus"
 	"github.com/dumacp/go-logs/pkg/logs"
 )
 
-func ListenIngnovus(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenIngnovus(dev interface{}, contxt context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	var devv ingnovus.Device
 
@@ -31,6 +31,8 @@ func ListenIngnovus(dev interface{}, quit context.Context, ctx actor.Context, ty
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
 
+		quit, cancel := context.WithCancel(contxt)
+		defer cancel()
 		ch1 := devv.ListennEvents()
 
 		for {
@@ -64,7 +66,7 @@ func ListenIngnovus(dev interface{}, quit context.Context, ctx actor.Context, ty
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(0),
 							Value: int64(inputsP1),
-							Type:  messages.INPUT,
+							Type:  messages.Event_INPUT,
 						})
 					}
 					inputsFront = inputsP1
@@ -72,7 +74,7 @@ func ListenIngnovus(dev interface{}, quit context.Context, ctx actor.Context, ty
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(1),
 							Value: int64(inputsP2),
-							Type:  messages.INPUT,
+							Type:  messages.Event_INPUT,
 						})
 					}
 					inputsBack = inputsP2
@@ -81,7 +83,7 @@ func ListenIngnovus(dev interface{}, quit context.Context, ctx actor.Context, ty
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(0),
 							Value: int64(outputsP1),
-							Type:  messages.OUTPUT,
+							Type:  messages.Event_OUTPUT,
 						})
 					}
 					outputsFront = outputsP1
@@ -89,7 +91,7 @@ func ListenIngnovus(dev interface{}, quit context.Context, ctx actor.Context, ty
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(1),
 							Value: int64(outputsP2),
-							Type:  messages.OUTPUT,
+							Type:  messages.Event_OUTPUT,
 						})
 					}
 					outputsBack = outputsP2
@@ -109,7 +111,7 @@ func ListenIngnovus(dev interface{}, quit context.Context, ctx actor.Context, ty
 							rootctx.Send(self, &messages.Event{
 								Id:    int32(0),
 								Value: int64(tamperingP1),
-								Type:  messages.TAMPERING,
+								Type:  messages.Event_TAMPERING,
 							})
 						}
 					case ingnovus.SensorBloqueado2:
@@ -118,7 +120,7 @@ func ListenIngnovus(dev interface{}, quit context.Context, ctx actor.Context, ty
 							rootctx.Send(self, &messages.Event{
 								Id:    int32(1),
 								Value: int64(tamperingP2),
-								Type:  messages.TAMPERING,
+								Type:  messages.Event_TAMPERING,
 							})
 						}
 					}

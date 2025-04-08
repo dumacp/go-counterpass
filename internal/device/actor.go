@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/AsynkronIT/protoactor-go/eventstream"
+	"github.com/asynkron/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/eventstream"
 	"github.com/dumacp/go-logs/pkg/logs"
 	"github.com/looplab/fsm"
 )
@@ -43,7 +43,7 @@ func subscribe(ctx actor.Context, evs *eventstream.EventStream) {
 	fn := func(evt interface{}) {
 		rootctx.RequestWithCustomSender(pid, evt, self)
 	}
-	evs.Subscribe(fn).WithPredicate(func(evt interface{}) bool {
+	evs.SubscribeWithPredicate(fn, func(evt interface{}) bool {
 		switch evt.(type) {
 		case *MsgDevice:
 			return true

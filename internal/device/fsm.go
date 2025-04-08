@@ -74,6 +74,7 @@ func (a *Actor) Fsm() {
 				}
 			}
 			if err != nil {
+				fmt.Printf("error open device: %s\n", err)
 				e.Cancel(err)
 				a.ctx.Send(a.ctx.Self(), &StartDevice{})
 				return

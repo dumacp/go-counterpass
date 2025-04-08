@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/messages"
 	"github.com/dumacp/go-logs/pkg/logs"
 	"github.com/dumacp/sonar/contador"
@@ -21,7 +21,7 @@ type mem struct {
 	locks   []int64
 }
 
-func ListenSonar(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenSonar(dev interface{}, contxt context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	var devv *contador.Device
 
@@ -41,7 +41,7 @@ func ListenSonar(dev interface{}, quit context.Context, ctx actor.Context, typeC
 
 	queue := new(list.List)
 
-	ch := devv.ListenRawChannel(quit)
+	ch := devv.ListenRawChannel(contxt)
 
 	self := ctx.Self()
 	rootctx := ctx.ActorSystem().Root
@@ -99,14 +99,14 @@ func processData(ctx *actor.RootContext, pid *actor.PID, v []byte, mem *mem, cou
 	if len(mem.raw) <= 0 || data[0] > mem.raw[0] {
 		enters := data[0]
 		if diff := enters - mem.inputs[0]; diff > 0 || len(mem.raw) <= 0 {
-			sendEvent(ctx, pid, counterType, &messages.Event{Id: 0, Type: messages.INPUT, Value: enters})
+			sendEvent(ctx, pid, counterType, &messages.Event{Id: 0, Type: messages.Event_INPUT, Value: enters})
 		}
 		mem.inputs[0] = enters
 	}
 	if len(mem.raw) <= 0 || data[1] > mem.raw[1] {
 		enters := data[1]
 		if diff := enters - mem.outputs[0]; diff > 0 || len(mem.raw) <= 0 {
-			sendEvent(ctx, pid, counterType, &messages.Event{Id: 0, Type: messages.OUTPUT, Value: enters})
+			sendEvent(ctx, pid, counterType, &messages.Event{Id: 0, Type: messages.Event_OUTPUT, Value: enters})
 		}
 		mem.outputs[0] = enters
 	}
@@ -114,14 +114,14 @@ func processData(ctx *actor.RootContext, pid *actor.PID, v []byte, mem *mem, cou
 		if len(mem.raw) <= 0 || data[2] > mem.raw[2] {
 			enters := data[2]
 			if diff := enters - mem.inputs[1]; diff > 0 || len(mem.raw) <= 0 {
-				sendEvent(ctx, pid, counterType, &messages.Event{Id: 1, Type: messages.INPUT, Value: enters})
+				sendEvent(ctx, pid, counterType, &messages.Event{Id: 1, Type: messages.Event_INPUT, Value: enters})
 			}
 			mem.inputs[1] = enters
 		}
 		if len(mem.raw) <= 0 || data[3] > mem.raw[3] {
 			enters := data[3]
 			if diff := enters - mem.outputs[1]; diff > 0 || len(mem.raw) <= 0 {
-				sendEvent(ctx, pid, counterType, &messages.Event{Id: 1, Type: messages.OUTPUT, Value: enters})
+				sendEvent(ctx, pid, counterType, &messages.Event{Id: 1, Type: messages.Event_OUTPUT, Value: enters})
 			}
 			mem.outputs[1] = enters
 		}
@@ -136,7 +136,7 @@ func processData(ctx *actor.RootContext, pid *actor.PID, v []byte, mem *mem, cou
 				enters := data[10]
 				if diff := enters - mem.locks[0]; diff > 0 {
 					sendEvent(ctx, pid, counterType, &messages.Event{
-						Id: id, Type: messages.TAMPERING, Value: enters})
+						Id: id, Type: messages.Event_TAMPERING, Value: enters})
 				}
 				mem.locks[0] = enters
 			}
@@ -147,7 +147,7 @@ func processData(ctx *actor.RootContext, pid *actor.PID, v []byte, mem *mem, cou
 				enters := data[13]
 				if diff := enters - mem.locks[1]; diff > 0 {
 					sendEvent(ctx, pid, counterType, &messages.Event{
-						Id: id, Type: messages.TAMPERING, Value: enters})
+						Id: id, Type: messages.Event_TAMPERING, Value: enters})
 				}
 				mem.locks[1] = enters
 			}
@@ -160,14 +160,14 @@ func processData(ctx *actor.RootContext, pid *actor.PID, v []byte, mem *mem, cou
 				enters := data[13]
 				if diff := enters - mem.locks[0]; diff > 0 {
 					sendEvent(ctx, pid, counterType, &messages.Event{
-						Id: id, Type: messages.TAMPERING, Value: enters})
+						Id: id, Type: messages.Event_TAMPERING, Value: enters})
 				}
 				mem.locks[0] = enters
 			} else {
 				enters := data[14]
 				if diff := enters - mem.locks[1]; diff > 0 {
 					sendEvent(ctx, pid, counterType, &messages.Event{
-						Id: id, Type: messages.TAMPERING, Value: enters})
+						Id: id, Type: messages.Event_TAMPERING, Value: enters})
 				}
 				mem.locks[1] = enters
 			}

@@ -7,20 +7,20 @@ import (
 	"io"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/messages"
 	"github.com/dumacp/go-ingnovus/st3310H04"
 	"github.com/dumacp/go-logs/pkg/logs"
 )
 
-func ListenSt3310_h04(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenSt3310_h04(dev interface{}, contxt context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
 	var devv st3310H04.Device
 
 	if v, ok := dev.(st3310H04.Device); !ok {
-		return fmt.Errorf("device is not ingnovus st3310 device")
+		return fmt.Errorf("device is not ingnovus st3310H04 device")
 	} else {
 		devv = v
 	}
@@ -38,6 +38,8 @@ func ListenSt3310_h04(dev interface{}, quit context.Context, ctx actor.Context, 
 	rootctx := ctx.ActorSystem().Root
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
+		quit, cancel := context.WithCancel(contxt)
+		defer cancel()
 		firstFrameCh1 := true
 		countErr := 0
 		tick1 := time.NewTicker(timeoutsamples)
@@ -61,10 +63,11 @@ func ListenSt3310_h04(dev interface{}, quit context.Context, ctx actor.Context, 
 						if time.Since(tn) < timeout/10 {
 							fmt.Println(err)
 							countErr++
+							fmt.Printf("error ReadEvent: %s\n", err)
 						}
 					} else {
 						countErr++
-						fmt.Println(err)
+						fmt.Printf("error ReadEvent: %s\n", err)
 					}
 					if countErr > max_error {
 						ctx.Send(self, &MsgListenError{ID: 0})
@@ -74,7 +77,7 @@ func ListenSt3310_h04(dev interface{}, quit context.Context, ctx actor.Context, 
 					break
 				}
 				countErr = 0
-				fmt.Printf("%s: result readbytes: %+v\n",
+				fmt.Printf("%s: result readbytes: %s\n",
 					time.Now().Format("02-01-2006 15:04:05.000"), result)
 
 				if result == nil {
@@ -94,7 +97,8 @@ func ListenSt3310_h04(dev interface{}, quit context.Context, ctx actor.Context, 
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(id),
 							Value: int64(result.InputsP1()),
-							Type:  messages.INPUT,
+							Type:  messages.Event_INPUT,
+							Raw:   result.RawResponse(),
 						})
 					}
 					inputsFront = uint(result.InputsP1())
@@ -102,7 +106,8 @@ func ListenSt3310_h04(dev interface{}, quit context.Context, ctx actor.Context, 
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(id),
 							Value: int64(result.OutputsP1()),
-							Type:  messages.OUTPUT,
+							Type:  messages.Event_OUTPUT,
+							Raw:   result.RawResponse(),
 						})
 					}
 					outputsFront = uint(result.OutputsP1())
@@ -112,7 +117,8 @@ func ListenSt3310_h04(dev interface{}, quit context.Context, ctx actor.Context, 
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(id),
 							Value: int64(result.InputsP2()),
-							Type:  messages.INPUT,
+							Type:  messages.Event_INPUT,
+							Raw:   result.RawResponse(),
 						})
 					}
 					inputsBack = uint(result.InputsP2())
@@ -120,7 +126,8 @@ func ListenSt3310_h04(dev interface{}, quit context.Context, ctx actor.Context, 
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(id),
 							Value: int64(result.OutputsP2()),
-							Type:  messages.OUTPUT,
+							Type:  messages.Event_OUTPUT,
+							Raw:   result.RawResponse(),
 						})
 					}
 					outputsBack = uint(result.OutputsP2())
@@ -129,7 +136,8 @@ func ListenSt3310_h04(dev interface{}, quit context.Context, ctx actor.Context, 
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(id),
 							Value: int64(result.InputsP2()),
-							Type:  messages.INPUT,
+							Type:  messages.Event_INPUT,
+							Raw:   result.RawResponse(),
 						})
 					}
 					inputsBack3 = uint(result.InputsP3())
@@ -137,7 +145,8 @@ func ListenSt3310_h04(dev interface{}, quit context.Context, ctx actor.Context, 
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(id),
 							Value: int64(result.OutputsP3()),
-							Type:  messages.OUTPUT,
+							Type:  messages.Event_OUTPUT,
+							Raw:   result.RawResponse(),
 						})
 					}
 					outputsBack3 = uint(result.OutputsP3())
@@ -155,7 +164,7 @@ func ListenSt3310_h04(dev interface{}, quit context.Context, ctx actor.Context, 
 							rootctx.Send(self, &messages.Event{
 								Id:    int32(0),
 								Value: int64(tamperingP1),
-								Type:  messages.TAMPERING,
+								Type:  messages.Event_TAMPERING,
 							})
 						}
 					case st3310H04.SensorBloqueado2:
@@ -164,7 +173,7 @@ func ListenSt3310_h04(dev interface{}, quit context.Context, ctx actor.Context, 
 							rootctx.Send(self, &messages.Event{
 								Id:    int32(1),
 								Value: int64(tamperingP2),
-								Type:  messages.TAMPERING,
+								Type:  messages.Event_TAMPERING,
 							})
 						}
 					}

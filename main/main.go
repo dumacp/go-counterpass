@@ -13,8 +13,8 @@ import (
 
 	"fmt"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/AsynkronIT/protoactor-go/persistence"
+	"github.com/asynkron/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/persistence"
 	"github.com/dumacp/go-counterpass/internal/app"
 	"github.com/dumacp/go-counterpass/internal/device"
 	"github.com/dumacp/go-counterpass/internal/doors"
@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	showVersion = "2.1.5"
+	showVersion = "2.3.6"
 )
 
 var debug bool
@@ -147,7 +147,7 @@ func main() {
 
 	propsCounting := actor.PropsFromProducer(func() actor.Actor { return counting })
 	if !disablePersistence {
-		propsCounting = propsCounting.WithReceiverMiddleware(persistence.Using(provider))
+		propsCounting = propsCounting.Configure(actor.WithReceiverMiddleware(persistence.Using(provider)))
 	} else {
 		counting.DisablePersistence(true)
 	}

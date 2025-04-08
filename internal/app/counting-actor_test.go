@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/messages"
 )
 
@@ -29,42 +29,42 @@ func TestNewCountingActor(t *testing.T) {
 					{
 						Id:    0,
 						Value: 1,
-						Type:  messages.OUTPUT,
+						Type:  messages.Event_OUTPUT,
 					},
 					{
 						Id:    0,
 						Value: 2,
-						Type:  messages.INPUT,
+						Type:  messages.Event_INPUT,
 					},
 					{
 						Id:    0,
 						Value: 3,
-						Type:  messages.OUTPUT,
+						Type:  messages.Event_OUTPUT,
 					},
 					{
 						Id:    0,
 						Value: 4,
-						Type:  messages.INPUT,
+						Type:  messages.Event_INPUT,
 					},
 					{
 						Id:    0,
 						Value: 5,
-						Type:  messages.OUTPUT,
+						Type:  messages.Event_OUTPUT,
 					},
 					{
 						Id:    0,
 						Value: 6,
-						Type:  messages.INPUT,
+						Type:  messages.Event_INPUT,
 					},
 					{
 						Id:    0,
 						Value: 7,
-						Type:  messages.OUTPUT,
+						Type:  messages.Event_OUTPUT,
 					},
 					{
 						Id:    0,
 						Value: 8,
-						Type:  messages.INPUT,
+						Type:  messages.Event_INPUT,
 					},
 				},
 			},

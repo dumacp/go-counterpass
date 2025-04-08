@@ -7,13 +7,13 @@ import (
 	"io"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/messages"
 	"github.com/dumacp/go-logs/pkg/logs"
 	"github.com/dumacp/go-optocontrol"
 )
 
-func ListenOptocontrolV301(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenOptocontrolV301(dev interface{}, contxt context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 	timeout := time.Duration(timeout_samples) * time.Millisecond
 
 	var devv optocontrol.Device_v301
@@ -35,6 +35,8 @@ func ListenOptocontrolV301(dev interface{}, quit context.Context, ctx actor.Cont
 	rootctx := ctx.ActorSystem().Root
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
+		quit, cancel := context.WithCancel(contxt)
+		defer cancel()
 		firstFrameCh1 := true
 		countErr := 0
 		var ch1 <-chan time.Time
@@ -94,7 +96,7 @@ func ListenOptocontrolV301(dev interface{}, quit context.Context, ctx actor.Cont
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(id),
 							Value: int64(result.AdultUpFront),
-							Type:  messages.INPUT,
+							Type:  messages.Event_INPUT,
 						})
 					}
 					inputsFront = result.AdultUpFront
@@ -103,7 +105,7 @@ func ListenOptocontrolV301(dev interface{}, quit context.Context, ctx actor.Cont
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(id),
 							Value: int64(result.AdultDownFront),
-							Type:  messages.OUTPUT,
+							Type:  messages.Event_OUTPUT,
 						})
 					}
 					outputsFront = result.AdultDownFront
@@ -112,7 +114,7 @@ func ListenOptocontrolV301(dev interface{}, quit context.Context, ctx actor.Cont
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(id),
 							Value: int64(result.LocksFront),
-							Type:  messages.TAMPERING,
+							Type:  messages.Event_TAMPERING,
 						})
 					}
 					tamperingFront = result.LocksFront
@@ -126,7 +128,7 @@ func ListenOptocontrolV301(dev interface{}, quit context.Context, ctx actor.Cont
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(id),
 							Value: int64(result.AdultUpBack),
-							Type:  messages.INPUT,
+							Type:  messages.Event_INPUT,
 						})
 					}
 					inputsBack = result.AdultUpBack
@@ -135,7 +137,7 @@ func ListenOptocontrolV301(dev interface{}, quit context.Context, ctx actor.Cont
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(id),
 							Value: int64(result.AdultDownBack),
-							Type:  messages.OUTPUT,
+							Type:  messages.Event_OUTPUT,
 						})
 					}
 					outputsBack = result.AdultDownBack
@@ -144,7 +146,7 @@ func ListenOptocontrolV301(dev interface{}, quit context.Context, ctx actor.Cont
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(id),
 							Value: int64(result.LocksBack),
-							Type:  messages.TAMPERING,
+							Type:  messages.Event_TAMPERING,
 						})
 					}
 					tamperingBack = result.LocksBack

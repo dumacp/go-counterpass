@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/AsynkronIT/protoactor-go/eventstream"
+	"github.com/asynkron/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/eventstream"
 	"github.com/dumacp/go-counterpass/internal/device"
 	"github.com/dumacp/go-counterpass/messages"
 	"github.com/dumacp/go-logs/pkg/logs"
@@ -45,7 +45,7 @@ func subscribe(ctx actor.Context, evs *eventstream.EventStream) {
 		rootctx.RequestWithCustomSender(pid, evt, self)
 
 	}
-	evs.Subscribe(fn).WithPredicate(func(evt interface{}) bool {
+	evs.SubscribeWithPredicate(fn, func(evt interface{}) bool {
 		switch evt.(type) {
 		case *MsgListenError, *MsgListenStarted,
 			*messages.Event, *device.CloseDevice, *device.StartDevice, *device.StopDevice:
@@ -111,6 +111,7 @@ func (a *ListenActor) Receive(ctx actor.Context) {
 	case *MsgListenError:
 		if a.evts != nil {
 			a.evts.Publish(&device.StopDevice{})
+			time.Sleep(6 * time.Second)
 			a.evts.Publish(&device.StartDevice{})
 		}
 		if a.isListennerOk {

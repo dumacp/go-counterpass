@@ -7,13 +7,13 @@ import (
 	"io"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/messages"
 	"github.com/dumacp/go-ingnovus/st300"
 	"github.com/dumacp/go-logs/pkg/logs"
 )
 
-func ListenSt300(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenSt300(dev interface{}, contxt context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
@@ -42,6 +42,8 @@ func ListenSt300(dev interface{}, quit context.Context, ctx actor.Context, typeC
 	rootctx := ctx.ActorSystem().Root
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
+		quit, cancel := context.WithCancel(contxt)
+		defer cancel()
 		firstFrameCh1 := true
 		countErr := 0
 		tick1 := time.NewTicker(timeoutsamples)
@@ -91,7 +93,7 @@ func ListenSt300(dev interface{}, quit context.Context, ctx actor.Context, typeC
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Inputs()),
-						Type:  messages.INPUT,
+						Type:  messages.Event_INPUT,
 					})
 				}
 				inputsFront = uint(result.Inputs())
@@ -99,7 +101,7 @@ func ListenSt300(dev interface{}, quit context.Context, ctx actor.Context, typeC
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(result.Outputs()),
-						Type:  messages.OUTPUT,
+						Type:  messages.Event_OUTPUT,
 					})
 				}
 				outputsFront = uint(result.Outputs())
@@ -107,7 +109,7 @@ func ListenSt300(dev interface{}, quit context.Context, ctx actor.Context, typeC
 				//	rootctx.Send(self, &messages.Event{
 				//		Id:    int32(id),
 				//		Value: int64(result.Locks1()),
-				//		Type:  messages.TAMPERING,
+				//		Type:  messages.Event_TAMPERING,
 				//	})
 				//}
 				//tamperingFront = uint(result.Locks1())

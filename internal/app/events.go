@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/internal/gps"
 	"github.com/dumacp/go-counterpass/messages"
 	"github.com/dumacp/go-logs/pkg/logs"
@@ -17,9 +17,9 @@ func buildEventPass(ctx actor.Context, id int,
 	puerta map[uint]uint, raw []byte) ([]byte, error) {
 
 	contadores := []int64{0, 0}
-	if ttype == messages.INPUT {
+	if ttype == messages.Event_INPUT {
 		contadores[0] = value
-	} else if ttype == messages.OUTPUT {
+	} else if ttype == messages.Event_OUTPUT {
 		contadores[1] = value
 	}
 	frame := ""

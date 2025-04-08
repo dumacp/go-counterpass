@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/actor"
 	"github.com/dumacp/go-logs/pkg/logs"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -143,7 +144,9 @@ func (ps *pubsubActor) Receive(ctx actor.Context) {
 		}
 	case *publishMSG:
 		// fmt.Printf("publish msg: %s", msg.msg)
-		fmt.Printf("publish msg: %s\n", msg.msg)
+		if !strings.HasPrefix(msg.topic, "COUNTERSMAPDOOR") {
+			fmt.Printf("publish msg: %s\n", msg.msg)
+		}
 		tk := ps.client.Publish(msg.topic, 0, false, msg.msg)
 		if !tk.WaitTimeout(3 * time.Second) {
 			if tk.Error() != nil {

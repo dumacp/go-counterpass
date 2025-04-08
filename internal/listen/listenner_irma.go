@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/internal/device"
 	"github.com/dumacp/go-counterpass/messages"
 	"github.com/dumacp/go-logs/pkg/logs"
@@ -42,7 +42,7 @@ func ListenIrma(dev interface{}, quit context.Context, ctx actor.Context, typeCo
 				return
 			case <-tick.C:
 				if err := processIrmaData(ctx, self, 1, devv.Url); err != nil {
-					fmt.Printf("error comanda irma: %s", err)
+					fmt.Printf("error command irma: %s\n", err)
 				}
 
 			}
@@ -76,10 +76,10 @@ func processIrmaData(ctx *actor.RootContext, pid *actor.PID, id int32, url strin
 	logs.LogBuild.Printf("irma data: %s", out)
 
 	if dataIrma.In > 0 {
-		ctx.Send(pid, &messages.Event{Id: id, Type: messages.INPUT, Value: int64(dataIrma.In)})
+		ctx.Send(pid, &messages.Event{Id: id, Type: messages.Event_INPUT, DiffValue: int32(dataIrma.In)})
 	}
 	if dataIrma.Out > 0 {
-		ctx.Send(pid, &messages.Event{Id: id, Type: messages.OUTPUT, Value: int64(dataIrma.Out)})
+		ctx.Send(pid, &messages.Event{Id: id, Type: messages.Event_OUTPUT, DiffValue: int32(dataIrma.Out)})
 	}
 	return nil
 }

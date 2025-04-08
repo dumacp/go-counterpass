@@ -9,13 +9,13 @@ import (
 	"log"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/actor"
 	"github.com/dumacp/go-counterpass/messages"
 	"github.com/dumacp/go-levis"
 	"github.com/dumacp/go-logs/pkg/logs"
 )
 
-func ListenBeane(dev interface{}, quit context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
+func ListenBeane(dev interface{}, contxt context.Context, ctx actor.Context, typeCounter int, externalConsole bool) error {
 
 	timeoutsamples := time.Duration(timeout_samples) * time.Millisecond
 
@@ -44,6 +44,8 @@ func ListenBeane(dev interface{}, quit context.Context, ctx actor.Context, typeC
 	rootctx := ctx.ActorSystem().Root
 
 	go func(ctx *actor.RootContext, self *actor.PID) {
+		quit, cancel := context.WithCancel(contxt)
+		defer cancel()
 		var tamperingTimerBack = time.NewTimer(100 * time.Millisecond)
 		if !tamperingTimerBack.Stop() {
 			select {
@@ -134,7 +136,7 @@ func ListenBeane(dev interface{}, quit context.Context, ctx actor.Context, typeC
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(inputs),
-						Type:  messages.INPUT,
+						Type:  messages.Event_INPUT,
 						Raw:   result,
 					})
 				}
@@ -143,7 +145,7 @@ func ListenBeane(dev interface{}, quit context.Context, ctx actor.Context, typeC
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(outputs),
-						Type:  messages.OUTPUT,
+						Type:  messages.Event_OUTPUT,
 						Raw:   result,
 					})
 				}
@@ -152,7 +154,7 @@ func ListenBeane(dev interface{}, quit context.Context, ctx actor.Context, typeC
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(anomalies),
-						Type:  messages.ANOMALY,
+						Type:  messages.Event_ANOMALY,
 						Raw:   result,
 					})
 				}
@@ -164,7 +166,7 @@ func ListenBeane(dev interface{}, quit context.Context, ctx actor.Context, typeC
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(id),
 							Value: int64(tampering - 1),
-							Type:  messages.TAMPERING,
+							Type:  messages.Event_TAMPERING,
 							Raw:   result,
 						})
 					default:
@@ -172,7 +174,7 @@ func ListenBeane(dev interface{}, quit context.Context, ctx actor.Context, typeC
 							rootctx.Send(self, &messages.Event{
 								Id:    int32(id),
 								Value: int64(tampering),
-								Type:  messages.TAMPERING,
+								Type:  messages.Event_TAMPERING,
 								Raw:   result,
 							})
 							if !tamperingTimerFront.Stop() {
@@ -242,7 +244,7 @@ func ListenBeane(dev interface{}, quit context.Context, ctx actor.Context, typeC
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(inputs),
-						Type:  messages.INPUT,
+						Type:  messages.Event_INPUT,
 					})
 				}
 				inputsBack = inputs
@@ -250,7 +252,7 @@ func ListenBeane(dev interface{}, quit context.Context, ctx actor.Context, typeC
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(outputs),
-						Type:  messages.OUTPUT,
+						Type:  messages.Event_OUTPUT,
 						Raw:   result,
 					})
 				}
@@ -259,7 +261,7 @@ func ListenBeane(dev interface{}, quit context.Context, ctx actor.Context, typeC
 					rootctx.Send(self, &messages.Event{
 						Id:    int32(id),
 						Value: int64(anomalies),
-						Type:  messages.ANOMALY,
+						Type:  messages.Event_ANOMALY,
 						Raw:   result,
 					})
 				}
@@ -271,7 +273,7 @@ func ListenBeane(dev interface{}, quit context.Context, ctx actor.Context, typeC
 						rootctx.Send(self, &messages.Event{
 							Id:    int32(id),
 							Value: int64(tampering - 1),
-							Type:  messages.TAMPERING,
+							Type:  messages.Event_TAMPERING,
 							Raw:   result,
 						})
 					default:
@@ -279,7 +281,7 @@ func ListenBeane(dev interface{}, quit context.Context, ctx actor.Context, typeC
 							rootctx.Send(self, &messages.Event{
 								Id:    int32(id),
 								Value: int64(tampering),
-								Type:  messages.TAMPERING,
+								Type:  messages.Event_TAMPERING,
 								Raw:   result,
 							})
 							if !tamperingTimerBack.Stop() {

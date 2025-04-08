@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/AsynkronIT/protoactor-go/eventstream"
+	"github.com/asynkron/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/eventstream"
 	"github.com/dumacp/go-counterpass/internal/pubsub"
 	"github.com/dumacp/go-doors/api"
 	"github.com/dumacp/go-doors/doorsmsg"
@@ -36,7 +36,7 @@ func subscribe(ctx actor.Context, evs *eventstream.EventStream) {
 	fn := func(evt interface{}) {
 		rootctx.RequestWithCustomSender(pid, evt, self)
 	}
-	evs.Subscribe(fn).WithPredicate(func(evt interface{}) bool {
+	evs.SubscribeWithPredicate(fn, func(evt interface{}) bool {
 		switch evt.(type) {
 		case *MsgDoor:
 			return true

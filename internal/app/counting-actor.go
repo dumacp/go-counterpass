@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/AsynkronIT/protoactor-go/actor"
-	"github.com/AsynkronIT/protoactor-go/persistence"
+	"github.com/asynkron/protoactor-go/actor"
+	"github.com/asynkron/protoactor-go/persistence"
 	"github.com/dumacp/go-counterpass/internal/doors"
 	"github.com/dumacp/go-counterpass/internal/gps"
 	"github.com/dumacp/go-counterpass/internal/listen"
@@ -24,6 +24,7 @@ const (
 
 type CountingActor struct {
 	persistence.Mixin
+	lastEvent          time.Time
 	puertas            map[uint]uint
 	openState          map[int32]uint
 	enableDoorVerify   bool
@@ -98,7 +99,11 @@ func (a *CountingActor) DisablePersistence(disable bool) {
 }
 
 func (a *CountingActor) Receive(ctx actor.Context) {
-	fmt.Printf("actor \"%s\", message: %v, %T\n", ctx.Self().GetId(), ctx.Message(), ctx.Message())
+	switch ctx.Message().(type) {
+	case *MsgSendRegisters:
+	default:
+		fmt.Printf("actor \"%s\", message: %v, %T\n", ctx.Self().GetId(), ctx.Message(), ctx.Message())
+	}
 	switch msg := ctx.Message().(type) {
 	case *actor.Started:
 		if a.disablePersistence {
@@ -249,8 +254,13 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 		if !a.disablePersistence && !a.Recovering() {
 			a.PersistReceive(msg)
 		}
+		if time.Since(a.lastEvent) > 60*time.Second {
+			a.lastEvent = time.Now()
+			logs.LogInfo.Printf("raw data: [%X]", msg.Raw)
+		}
 		switch msg.GetType() {
-		case messages.INPUT:
+		case messages.Event_INPUT:
+			// TODO: add verification of the input value
 			if err := func() error {
 				id := msg.Id
 				if a.firstEventInput0 || a.firstEventInput1 {
@@ -278,7 +288,27 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 
 				diff := msg.GetValue() - a.rawInputs[id]
 
-				if diff > 0 && a.rawInputs[id] <= 0 {
+				diffValue := msg.GetDiffValue()
+
+				if diffValue > 0 {
+					if v, ok := a.puertas[uint(id)]; !a.enableDoorVerify || !ok || v == a.openState[id] {
+						a.inputs[id] += int64(diffValue)
+
+						data, err := buildEventPass(ctx, int(id), msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
+						if err != nil {
+							return err
+						}
+						if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
+							// pubsub.Publish(topicCounterEvent, data)
+							ctx.Send(a.pidQueue, &MsgQueueEvent{
+								Event:     data,
+								Type:      msg.GetType(),
+								Timestamp: time.Now(),
+								ID:        id,
+							})
+						}
+					}
+				} else if diff > 0 && a.rawInputs[id] <= 0 {
 					if v, ok := a.puertas[uint(id)]; !a.enableDoorVerify || !ok || v == a.openState[id] {
 						a.inputs[id] += 1
 
@@ -314,13 +344,21 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 						}
 						if diff > 5 {
 							logs.LogError.Printf("diff is greater than 5 -> msg.GetValue(): %d, a.rawInputs[%d]:: %d", msg.GetValue(), id, a.rawInputs[id])
+							logs.LogError.Printf("diff is greater than 5 -> raw data: [%X]", msg.Raw)
 						}
 					}
 				} else if diff > -5 && diff < 0 {
 					logs.LogWarn.Printf("diff is negative -> msg.GetValue(): %d, a.rawInputs[%d]: %d", msg.GetValue(), id, a.rawInputs[id])
+					logs.LogWarn.Printf("diff is negative -> raw data: [%X]", msg.Raw)
 
-					a.inputs[id] += 1
-					data, err := buildEventPass(ctx, int(id), msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
+					value := int64(0)
+					if msg.GetValue() < 5 && msg.GetValue() > 0 {
+						value = msg.GetValue()
+					} else {
+						value += 1
+					}
+					a.inputs[id] += value
+					data, err := buildEventPass(ctx, int(id), msg.GetType(), value, a.pidGps, a.puertas, msg.Raw)
 					if err != nil {
 						return err
 					}
@@ -335,6 +373,29 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 					}
 				} else if diff != 0 {
 					logs.LogError.Printf("diff is greater than 60 or less than -5 -> msg.GetValue(): %d, a.rawInputs[%d]: %d", msg.GetValue(), id, a.rawInputs[id])
+					logs.LogError.Printf("diff is greater than 60 or less than -5 -> raw data: [%X]", msg.Raw)
+
+					value := int64(0)
+					if msg.GetValue() <= 10 && msg.GetValue() > 0 {
+						value = msg.GetValue()
+					} else {
+						value += 1
+					}
+
+					a.inputs[id] += value
+					data, err := buildEventPass(ctx, int(id), msg.GetType(), value, a.pidGps, a.puertas, msg.Raw)
+					if err != nil {
+						return err
+					}
+					if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
+						// pubsub.Publish(topicCounterEvent, data)
+						ctx.Send(a.pidQueue, &MsgQueueEvent{
+							Event:     data,
+							Type:      msg.GetType(),
+							Timestamp: time.Now(),
+							ID:        id,
+						})
+					}
 				}
 				return nil
 
@@ -342,12 +403,12 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 				logs.LogWarn.Printf("message Input error: %s", err)
 			}
 
-		case messages.OUTPUT:
+		case messages.Event_OUTPUT:
 			if err := func() error {
 				id := msg.Id
-				if a.firstEventInput0 || a.firstEventInput1 {
-					logs.LogInfo.Printf("new first input(%d). last value: %d, new value: %d",
-						id, a.inputs[id], msg.GetValue())
+				if a.firstEventOutput0 || a.firstEventOutput1 {
+					logs.LogInfo.Printf("new first output(%d). last value: %d, new value: %d",
+						id, a.outputs[id], msg.GetValue())
 					data, err := buildListenStarted(ctx, id, 0, a.pidGps)
 					if err != nil {
 						return err
@@ -368,7 +429,27 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 					a.outputs[id] = 0
 				}
 				diff := msg.GetValue() - a.rawOutputs[id]
-				if diff > 0 && a.rawOutputs[id] <= 0 {
+				diffValue := msg.GetDiffValue()
+
+				if diffValue > 0 {
+					if v, ok := a.puertas[uint(id)]; !a.enableDoorVerify || !ok || v == a.openState[id] {
+						a.inputs[id] += int64(diffValue)
+
+						data, err := buildEventPass(ctx, int(id), msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
+						if err != nil {
+							return err
+						}
+						if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
+							// pubsub.Publish(topicCounterEvent, data)
+							ctx.Send(a.pidQueue, &MsgQueueEvent{
+								Event:     data,
+								Type:      msg.GetType(),
+								Timestamp: time.Now(),
+								ID:        id,
+							})
+						}
+					}
+				} else if diff > 0 && a.rawOutputs[id] <= 0 {
 					if v, ok := a.puertas[uint(id)]; !a.enableDoorVerify || !ok || v == a.openState[id] {
 						a.outputs[id] += 1
 						data, err := buildEventPass(ctx, int(id), msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
@@ -404,14 +485,22 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 						}
 						if diff > 5 {
 							logs.LogWarn.Printf("diff is greater than 5 -> msg.GetValue(): %d, a.rawOutputs[%d]: %d", msg.GetValue(), id, a.rawOutputs[id])
+							logs.LogWarn.Printf("diff is greater than 5 -> raw data: [%X]", msg.Raw)
 						}
 					}
 				} else if diff > -5 && diff < 0 {
 					// a.outputs[id] += msg.GetValue()
 					logs.LogWarn.Printf("diff is negative -> msg.GetValue(): %d, a.rawOutputs[%d]: %d", msg.GetValue(), id, a.rawOutputs[id])
+					logs.LogWarn.Printf("diff is negative -> raw data: [%X]", msg.Raw)
 
-					a.outputs[id] += 1
-					data, err := buildEventPass(ctx, int(id), msg.GetType(), 1, a.pidGps, a.puertas, msg.Raw)
+					value := int64(0)
+					if msg.GetValue() <= 5 && msg.GetValue() > 0 {
+						value = msg.GetValue()
+					} else {
+						value += 1
+					}
+					a.outputs[id] += value
+					data, err := buildEventPass(ctx, int(id), msg.GetType(), value, a.pidGps, a.puertas, msg.Raw)
 					if err != nil {
 						return err
 					}
@@ -425,13 +514,36 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 						})
 					}
 				} else if diff != 0 {
+
 					logs.LogError.Printf("diff is greater than 60 or less than -5 -> msg.GetValue(): %d, a.rawOutputs[%d]: %d", msg.GetValue(), id, a.rawOutputs[id])
+					logs.LogError.Printf("diff is greater than 60 or less than -5 -> raw data: [%X]", msg.Raw)
+
+					value := int64(0)
+					if msg.GetValue() <= 10 && msg.GetValue() > 0 {
+						value = msg.GetValue()
+					} else {
+						value += 1
+					}
+					a.outputs[id] += int64(value)
+					data, err := buildEventPass(ctx, int(id), msg.GetType(), value, a.pidGps, a.puertas, msg.Raw)
+					if err != nil {
+						return err
+					}
+					if !a.disableSend && (a.disablePersistence || !a.Recovering()) {
+						// pubsub.Publish(topicCounterEvent, data)
+						ctx.Send(a.pidQueue, &MsgQueueEvent{
+							Event:     data,
+							Type:      msg.GetType(),
+							Timestamp: time.Now(),
+							ID:        id,
+						})
+					}
 				}
 				return nil
 			}(); err != nil {
 				logs.LogWarn.Printf("message Output error: %s", err)
 			}
-		case messages.TAMPERING:
+		case messages.Event_TAMPERING:
 			if err := func() error {
 				id := msg.Id
 				defer func() {
@@ -462,7 +574,7 @@ func (a *CountingActor) Receive(ctx actor.Context) {
 			}(); err != nil {
 				logs.LogWarn.Printf("message Tampering error: %s", err)
 			}
-		case messages.ANOMALY:
+		case messages.Event_ANOMALY:
 			if err := func() error {
 				id := msg.Id
 				defer func() {
