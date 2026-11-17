@@ -66,6 +66,8 @@ github.com/dumacp/go-ingnovus v0.0.0-20240615163652-30e11db662ad h1:Nt6ToBmFm7Io
 github.com/dumacp/go-ingnovus v0.0.0-20240615163652-30e11db662ad/go.mod h1:6Y7lYhDBu4k79Wxw615V7eAyeP8IbyFMoUc4W3rXMpQ=
 github.com/dumacp/go-levis v0.0.0-20241119224207-a91cacdf55e3 h1:OKloB9EoP8DFnvSIlWOrSzWT0NF4fR27s9fTuj3UW0c=
 github.com/dumacp/go-levis v0.0.0-20241119224207-a91cacdf55e3/go.mod h1:9f2R94dbumgXBnsfCcYSYR7PvTdLPOQKoGuAMpY6Kmc=
+github.com/dumacp/go-logirastreo v0.1.0 h1:d0XFMDArKOuJJReER0qecApvlbV+mmBb1vfC98dszfA=
+github.com/dumacp/go-logirastreo v0.1.0/go.mod h1:4EgjmEg8r3+VJkGnzyT+d4DPsJ7/RzUlqUBzgP8Ny08=
 github.com/dumacp/go-logs v0.0.0-20211122205852-dfcc5685457f/go.mod h1:dr8qC0qs36jLZFMZH/sRp3fc980yzZDCb/MkR/rHOSA=
 github.com/dumacp/go-logs v0.0.2-0.20241119230451-ac5d49be15ce h1:ZIutTKGHeQxk2dnB3Br9G6+Ah6NIUR7Vg1zjfphN6gk=
 github.com/dumacp/go-logs v0.0.2-0.20241119230451-ac5d49be15ce/go.mod h1:nxB2d1DaPSLGnz+0zuR29N/YRq7THIVwQLDHf0jBSRc=

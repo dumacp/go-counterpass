@@ -16,11 +16,8 @@ Al revisar el acceso el 17 de noviembre de 2026, `dumacp/go-doors` y
 necesita una cuenta autorizada y configurar `GOPRIVATE` para esos módulos,
 conservando cualquier configuración privada adicional del entorno.
 
-Queda una dependencia local: `github.com/dumacp/go-logirastreo`. Su directorio
-debe estar disponible en `../go-logirastreo`; todavía no se ha localizado un
-repositorio remoto accesible. Su versión cero es un marcador cubierto por
-ese `replace`, no una versión publicada. Cuando se publique el controlador,
-hay que fijar una versión real y eliminar ese último reemplazo local.
+`go-logirastreo` usa la versión publicada `v0.1.0`. No se necesitan
+directorios hermanos ni reemplazos a rutas locales para compilar.
 
 Comprobación de compilación, sin ejecutar las pruebas de puerto serie:
 

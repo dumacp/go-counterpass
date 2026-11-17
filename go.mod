@@ -10,7 +10,7 @@ require (
 	github.com/dumacp/go-gwiot v1.2.24-0.20261101194921-f2d0862b04ef
 	github.com/dumacp/go-ingnovus v0.0.0-20240615163652-30e11db662ad
 	github.com/dumacp/go-levis v0.0.0-20241119224207-a91cacdf55e3
-	github.com/dumacp/go-logirastreo v0.0.0-00010101000000-000000000000
+	github.com/dumacp/go-logirastreo v0.1.0
 	github.com/dumacp/go-logs v0.0.2-0.20241119230451-ac5d49be15ce
 	github.com/dumacp/go-optocontrol v0.1.0
 	github.com/dumacp/go-params v1.0.4
@@ -77,6 +77,3 @@ require (
 replace github.com/asynkron/protoactor-go => github.com/dumacp/protoactor-go v0.0.0-20261101194920-b85f35a0f362
 
 replace github.com/nats-io/nats.go => github.com/dumacp/nats.go v1.44.1-0.20261101194920-9a28c3fb2b88
-
-// Pending an accessible repository for this driver.
-replace github.com/dumacp/go-logirastreo => ../go-logirastreo
