@@ -1,46 +1,22 @@
 module github.com/dumacp/go-counterpass
 
-go 1.23.0
-
-replace github.com/dumacp/go-levis => ../go-levis
-
-replace github.com/dumacp/go-actors => ../go-actors
-
-replace github.com/dumacp/go-logs => ../go-logs
-
-replace github.com/dumacp/gpsnmea => ../gpsnmea
-
-replace github.com/dumacp/pubsub => ../pubsub
-
-replace github.com/dumacp/go-ingnovus => ../go-ingnovus
-
-replace github.com/dumacp/go-optocontrol => ../go-optocontrol
-
-replace github.com/dumacp/go-logirastreo => ../go-logirastreo
-
-replace github.com/dumacp/sonar => ../sonar
-
-replace github.com/dumacp/go-doors => ../go-doors
-
-replace github.com/dumacp/go-params => ../go-params
-
-replace github.com/asynkron/protoactor-go => ../../asynkron/protoactor-go
+go 1.25.0
 
 require (
 	github.com/asynkron/protoactor-go v0.0.0-20240413045429-76c172a71a16
 	github.com/brian-armstrong/gpio v0.0.0-20181227042754-72b0058bbbcb
-	github.com/dumacp/go-actors v0.0.0-20240613144007-fcb38ee7b9b1
-	github.com/dumacp/go-doors v0.0.0-00010101000000-000000000000
-	github.com/dumacp/go-gwiot v0.0.0-20250219205658-c5ffa6d680c1
-	github.com/dumacp/go-ingnovus v0.0.0-00010101000000-000000000000
+	github.com/dumacp/go-actors v0.1.0
+	github.com/dumacp/go-doors v1.2.1
+	github.com/dumacp/go-gwiot v1.2.24-0.20261101194921-f2d0862b04ef
+	github.com/dumacp/go-ingnovus v0.0.0-20240615163652-30e11db662ad
 	github.com/dumacp/go-levis v0.0.0-20241119224207-a91cacdf55e3
 	github.com/dumacp/go-logirastreo v0.0.0-00010101000000-000000000000
 	github.com/dumacp/go-logs v0.0.2-0.20241119230451-ac5d49be15ce
-	github.com/dumacp/go-optocontrol v0.0.0-00010101000000-000000000000
-	github.com/dumacp/go-params v1.0.2
-	github.com/dumacp/gpsnmea v0.0.0-20201110195359-2994f05cfb52
+	github.com/dumacp/go-optocontrol v0.1.0
+	github.com/dumacp/go-params v1.0.4
+	github.com/dumacp/gpsnmea v0.0.0-20260401150321-db2499a38f8c
 	github.com/dumacp/pubsub v0.0.0-20200115200904-f16f29d84ee0
-	github.com/dumacp/sonar v0.0.0-00010101000000-000000000000
+	github.com/dumacp/sonar v0.1.0
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/looplab/fsm v1.0.2
 	google.golang.org/protobuf v1.36.8
@@ -66,7 +42,7 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/lithammer/shortuuid/v4 v4.0.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
-	github.com/nats-io/nats.go v1.36.0 // indirect
+	github.com/nats-io/nats.go v1.44.0 // indirect
 	github.com/nats-io/nkeys v0.4.11 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/orcaman/concurrent-map v1.0.0 // indirect
@@ -75,6 +51,7 @@ require (
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.11.1 // indirect
+	github.com/serialx/hashring v0.0.0-20200727003509-22c0c7ab6b1b // indirect
 	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07 // indirect
 	github.com/twmb/murmur3 v1.1.8 // indirect
 	go.etcd.io/bbolt v1.3.10 // indirect
@@ -97,4 +74,9 @@ require (
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 )
 
-replace github.com/nats-io/nats.go => ../../nats-io/nats.go
+replace github.com/asynkron/protoactor-go => github.com/dumacp/protoactor-go v0.0.0-20261101194920-b85f35a0f362
+
+replace github.com/nats-io/nats.go => github.com/dumacp/nats.go v1.44.1-0.20261101194920-9a28c3fb2b88
+
+// Pending an accessible repository for this driver.
+replace github.com/dumacp/go-logirastreo => ../go-logirastreo
