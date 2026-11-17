@@ -2,7 +2,6 @@ package doors
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/asynkron/protoactor-go/actor"
@@ -45,7 +44,7 @@ func subscribe(ctx actor.Context, evs *eventstream.EventStream) {
 	})
 }
 
-func parseEvents(msg []byte) (interface{}, error) {
+func parseEvents(msg []byte) interface{} {
 
 	val := &api.ValuePubSubEvent{}
 
@@ -53,7 +52,8 @@ func parseEvents(msg []byte) (interface{}, error) {
 	event.Value = val
 
 	if err := json.Unmarshal(msg, event); err != nil {
-		return nil, err
+		logs.LogError.Printf("parse Doorstate error: %v", err)
+		return nil
 	}
 
 	result := new(MsgDoor)
@@ -66,22 +66,23 @@ func parseEvents(msg []byte) (interface{}, error) {
 	result.ID = uint(val.Id)
 	result.Value = uint(val.State)
 
-	return result, nil
+	return result
 }
 
-func parseEvents2(msg []byte) (interface{}, error) {
+func parseEvents2(msg []byte) interface{} {
 
 	val := &api.DoorState{}
 
 	if err := json.Unmarshal(msg, val); err != nil {
-		return nil, fmt.Errorf("parse Doorstate error: %v", val)
+		logs.LogError.Printf("parse Doorstate error: %v", err)
+		return nil
 	}
 
 	result := new(MsgDoor)
 	result.ID = uint(val.Id)
 	result.Value = uint(val.Value)
 
-	return result, nil
+	return result
 }
 
 // Receive func Receive in actor

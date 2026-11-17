@@ -81,7 +81,7 @@ type publishMSG struct {
 
 type subscribeMSG struct {
 	pid   *actor.PID
-	parse func([]byte) (interface{}, error)
+	parse func([]byte) interface{}
 }
 
 // Publish function to publish messages in pubsub gateway
@@ -90,7 +90,7 @@ func Publish(topic string, msg []byte) {
 }
 
 // Subscribe subscribe to topics
-func Subscribe(topic string, pid *actor.PID, parse func([]byte) (interface{}, error)) error {
+func Subscribe(topic string, pid *actor.PID, parse func([]byte) interface{}) error {
 	instance := getInstance(nil)
 	subs := &subscribeMSG{pid: pid, parse: parse}
 	// instance.mux.Lock()
@@ -110,9 +110,9 @@ func (ps *pubsubActor) subscribe(topic string, subs *subscribeMSG) error {
 		// logs.LogBuild.Printf("local topic -> %q", m.Topic())
 		// logs.LogBuild.Printf("local payload - > %s", m.Payload())
 		m.Ack()
-		msg, err := subs.parse(m.Payload())
-		if err != nil {
-			log.Printf("parse msg error (topic: %q) (payload: %q): %s", m.Topic(), m.Payload(), err)
+		msg := subs.parse(m.Payload())
+		if msg == nil {
+			log.Printf("parse msg error (topic: %q) (payload: %q)", m.Topic(), m.Payload())
 			return
 		}
 		// logs.LogBuild.Printf("parse payload-> %s", msg)

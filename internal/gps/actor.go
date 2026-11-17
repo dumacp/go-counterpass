@@ -15,7 +15,7 @@ const (
 	timeout = 30 * time.Second
 )
 
-//Actor actor to listen events
+// Actor actor to listen events
 type Actor struct {
 	ctx actor.Context
 	// subcriptors  map[string]*actor.PID
@@ -26,16 +26,16 @@ func NewActor() actor.Actor {
 	return &Actor{}
 }
 
-func parseEvents(msg []byte) (interface{}, error) {
+func parseEvents(msg []byte) interface{} {
 
 	event := new(MsgGpsRaw)
 	event.Data = msg
 	event.Time = time.Now()
 
-	return event, nil
+	return event
 }
 
-//Receive func Receive in actor
+// Receive func Receive in actor
 func (a *Actor) Receive(ctx actor.Context) {
 	logs.LogBuild.Printf("Message arrived in gpsActor: %T, %s",
 		ctx.Message(), ctx.Sender())

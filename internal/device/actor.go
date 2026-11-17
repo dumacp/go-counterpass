@@ -12,13 +12,16 @@ import (
 )
 
 type Actor struct {
-	ctx        actor.Context
-	portSerial string
-	speedBaud  int
-	fmachinae  *fsm.FSM
-	evts       *eventstream.EventStream
-	contxt     context.Context
-	cancel     func()
+	ctx           actor.Context
+	portSerial    string
+	speedBaud     int
+	fmachinae     *fsm.FSM
+	evts          *eventstream.EventStream
+	contxt        context.Context
+	cancel        func()
+	retryInterval time.Duration // Intervalo progresivo para reintentos
+	lastRetry     time.Time     // Último intento de reconexión
+	active        bool          // Estado del dispositivo
 }
 
 func NewActor(port string, speed int, readTimeout time.Duration) actor.Actor {
@@ -53,15 +56,21 @@ func subscribe(ctx actor.Context, evs *eventstream.EventStream) {
 }
 
 func (a *Actor) Receive(ctx actor.Context) {
-	fmt.Printf("actor \"%s\", message: %v, %T\n", ctx.Self().GetId(),
-		ctx.Message(), ctx.Message())
+	switch ctx.Message().(type) {
+	case *tickMsg:
+	default:
+		fmt.Printf("actor \"%s\", message: %v, %T\n", ctx.Self().GetId(),
+			ctx.Message(), ctx.Message())
+	}
 	a.ctx = ctx
 
 	switch msg := ctx.Message().(type) {
 	case *actor.Started:
+		a.retryInterval = 3 * time.Second // Inicializar con 3 segundos
 		contxt, cancel := context.WithCancel(context.TODO())
 		a.contxt = contxt
 		a.cancel = cancel
+		go tick(contxt, ctx, 30*time.Second)
 		ctx.Send(ctx.Self(), &StartDevice{})
 	case *actor.Stopping:
 		a.fmachinae.Event(a.contxt, eError)
@@ -70,7 +79,13 @@ func (a *Actor) Receive(ctx actor.Context) {
 		}
 	case *StartDevice:
 		if err := a.fmachinae.Event(a.contxt, eStarted); err != nil {
+			a.active = false
 			logs.LogError.Printf("open device error: %s", err)
+			// No enviar inmediatamente, esperar al próximo tick
+		} else {
+			a.active = true
+			a.retryInterval = 3 * time.Second // Reset interval on success
+			fmt.Printf("open device successfully\n")
 		}
 	case *MsgDevice:
 		a.fmachinae.Event(a.contxt, eOpenned)
@@ -82,5 +97,51 @@ func (a *Actor) Receive(ctx actor.Context) {
 			break
 		}
 		subscribe(ctx, a.evts)
+	case *tickMsg:
+		if !a.active {
+			// Solo intentar si ha pasado el intervalo requerido
+			if time.Since(a.lastRetry) >= a.retryInterval {
+				a.lastRetry = time.Now()
+				ctx.Send(ctx.Self(), &StartDevice{})
+
+				// Incrementar progresivamente: 3s -> 6s -> 10s -> 30s -> 60s -> 120s -> 180s (max)
+				switch a.retryInterval {
+				case 3 * time.Second:
+					a.retryInterval = 6 * time.Second
+				case 6 * time.Second:
+					a.retryInterval = 10 * time.Second
+				case 10 * time.Second:
+					a.retryInterval = 30 * time.Second
+				case 30 * time.Second:
+					a.retryInterval = 60 * time.Second
+				case 60 * time.Second:
+					a.retryInterval = 120 * time.Second
+				case 120 * time.Second:
+					a.retryInterval = 180 * time.Second
+					// Si ya está en 180s, se mantiene ahí
+				}
+			}
+		}
+	}
+}
+
+type tickMsg struct{}
+
+func tick(contxt context.Context, ctx actor.Context, timeout time.Duration) {
+	// Usar un ticker con intervalo mínimo (1 segundo) y controlar desde el actor
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+	tick1 := time.NewTicker(timeout)
+	defer tick1.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			ctx.Send(ctx.Self(), &tickMsg{})
+		case <-tick1.C:
+			ctx.Send(ctx.Self(), &tickMsg{})
+		case <-contxt.Done():
+			return
+		}
 	}
 }

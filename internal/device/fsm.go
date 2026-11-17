@@ -3,7 +3,6 @@ package device
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/dumacp/go-logs/pkg/logs"
 	"github.com/looplab/fsm"
@@ -61,18 +60,18 @@ func (a *Actor) Fsm() {
 				disp.Close()
 			}
 
-			for _, t := range []int{0, 3, 3, 10, 10, 10, 10, 10} {
-				if t > 0 {
-					time.Sleep(time.Duration(t) * time.Second)
-				}
-				disp, err = NewDevice(a.portSerial, a.speedBaud)
-				if err == nil {
-					break
-				}
-				if disp != nil {
-					disp.Close()
-				}
-			}
+			// for _, t := range []int{0, 3, 3, 10, 10, 10, 10, 10} {
+			// 	if t > 0 {
+			// 		time.Sleep(time.Duration(t) * time.Second)
+			// 	}
+			disp, err := NewDevice(a.portSerial, a.speedBaud)
+			// 	if err == nil {
+			// 		break
+			// 	}
+			// 	if disp != nil {
+			// 		disp.Close()
+			// 	}
+			// }
 			if err != nil {
 				fmt.Printf("error open device: %s\n", err)
 				e.Cancel(err)
